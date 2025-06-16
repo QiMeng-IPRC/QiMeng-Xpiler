@@ -5,8 +5,13 @@ from pycparser import c_ast
 from falcon.simplification import simplify_code
 from falcon.smt.const_inline import constant_inline
 from falcon.stmt_simplification import ast_stmt_simplification
-from falcon.util import (NodeTransformer, generate_code, make_full_func,
-                         parse_code_ast, remove_target_prefix)
+from falcon.util import (
+    NodeTransformer,
+    generate_code,
+    make_full_func,
+    parse_code_ast,
+    remove_target_prefix,
+)
 
 ParaVar = {
     "threadIdx.x": 1024,

@@ -7,12 +7,15 @@ from falcon.util import parse_code_ast
 
 class SplitForLoopVisitor(c_ast.NodeVisitor):
     def __init__(self):
-        self.factor = None  # Used to store the split factor extracted from the pragma
+        self.factor = (
+            None  # Used to store the split factor extracted from the pragma
+        )
         self.axis_name = None
         self.org_extent = None
 
     def visit_Compound(self, node):
-        """Use pragma loop_split and obtain the split factor to apply to subsequent for loops."""
+        """Use pragma loop_split and obtain the split factor to apply to
+        subsequent for loops."""
         blocks = node.block_items
         if not blocks:
             return
@@ -34,9 +37,9 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
                 # Extract factor values
                 pragma_content = subnode.string.strip()
                 self.factor = int(
-                    re.search(r"\\((?:factor=)?(\\d+)\\)", pragma_content).group(
-                        1
-                    )
+                    re.search(
+                        r"\\((?:factor=)?(\\d+)\\)", pragma_content
+                    ).group(1)
                 )
 
                 # Check if the next node is a `for` loop.
@@ -64,7 +67,7 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
         self.generic_visit(node)
 
     def split_for_loop(self, node):
-        """Split for loop"""
+        """Split for loop."""
         # Extract the maximum value of the original cycle (cycle range).
         self.org_extent = int(node.cond.right.value)
         outer_extent = self.factor

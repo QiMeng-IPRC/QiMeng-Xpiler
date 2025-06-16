@@ -13,14 +13,13 @@ process_file() {
 	echo "Processing file: $file"
 	# Remove unused imports
 	autoflake --remove-all-unused-imports --remove-unused-variables --in-place "$file"
-	docformatter --in-place --wrap-summaries 79 --wrap-descriptions 79 "$file"
 	autopep8 --in-place --aggressive --max-line-length 79 "$file"
-	pydocstringformatter --style=pep257 --style=numpydoc "$file"
 	# Sort import modules
 	isort "$file"
 
 	# Format the code using black
 	black --line-length 79 "$file"
+	docformatter --in-place --wrap-summaries 79 --wrap-descriptions 79 "$file"
 	flake8 "$file"
 }
 

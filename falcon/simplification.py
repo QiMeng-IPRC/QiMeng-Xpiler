@@ -2,8 +2,12 @@ import re
 
 from pycparser import c_ast
 
-from falcon.util import (NodeTransformer, generate_code, parse_code_ast,
-                         remove_target_prefix)
+from falcon.util import (
+    NodeTransformer,
+    generate_code,
+    parse_code_ast,
+    remove_target_prefix,
+)
 
 
 class SimplifyConstants(NodeTransformer):

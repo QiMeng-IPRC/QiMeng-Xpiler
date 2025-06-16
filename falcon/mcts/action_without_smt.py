@@ -2,13 +2,25 @@ import json
 import random
 
 from falcon.src.loop_transformation.loop_transformation import (
-    run_apply_split, run_loop_contraction, run_loop_fusion, run_loop_reorder,
-    run_split_annotation, run_stmt_split)
+    run_apply_split,
+    run_loop_contraction,
+    run_loop_fusion,
+    run_loop_reorder,
+    run_split_annotation,
+    run_stmt_split,
+)
 from falcon.src.post_processing.post_processing import (
-    replace_operation_with_intrinsic, run_cache_process, run_code_decoration,
-    run_double_buffer, run_tensorization, run_thread_binding)
-from falcon.src.pre_processing.preprocessing import (run_detensorization,
-                                                     run_loop_recovery)
+    replace_operation_with_intrinsic,
+    run_cache_process,
+    run_code_decoration,
+    run_double_buffer,
+    run_tensorization,
+    run_thread_binding,
+)
+from falcon.src.pre_processing.preprocessing import (
+    run_detensorization,
+    run_loop_recovery,
+)
 
 
 def loop_recovery(file_name, code, source_platform, target_platform):
