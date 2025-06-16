@@ -3,12 +3,8 @@ import re
 import numpy as np
 from pycparser import c_ast
 
-from falcon.util import (
-    NodeTransformer,
-    generate_code,
-    make_full_func,
-    parse_code_ast,
-)
+from falcon.util import (NodeTransformer, generate_code, make_full_func,
+                         parse_code_ast)
 
 
 class PragmaToSIMDTransformer(NodeTransformer):
@@ -17,16 +13,16 @@ class PragmaToSIMDTransformer(NodeTransformer):
         self.vectorize_var = None
 
     def visit_Compound(self, node):
-        """遍历代码块，查找并修改带有 #pragma 的 for 循环."""
+        """遍历代码块，查找并修改带有 # The comment refers to the "for loop" in pragma.
         new_block_items = []
         i = 0
         while i < len(node.block_items):
             stmt = node.block_items[i]
 
-            # 检查是否是 #pragma operation
+            # Check if it is a #pragma operation.
             if isinstance(stmt, c_ast.Pragma):
                 pragma_text = stmt.string
-                # 找到 pragma 下的下一个 for 循环
+                # Find the next for loop under pragma.
                 if i + 1 < len(node.block_items) and isinstance(
                     node.block_items[i + 1], c_ast.For
                 ):
@@ -35,14 +31,15 @@ class PragmaToSIMDTransformer(NodeTransformer):
                     )
                     new_block_items.append(
                         transformed_stmt
-                    )  # 替换 for 循环为目标指令
-                    i += 2  # 跳过下一个 for 循环，因为已经处理
+                    )  # Replace the for loop with target instructions.
+                    # Skip the next for loop, as it has already been processed.
+                    i += 2
                     continue
                 else:
-                    # 保留 #pragma 注解
+                    # Retain the #pragma annotations.
                     new_block_items.append(stmt)
             else:
-                # 保留未处理的语句
+                # Retain the unprocessed statements.
                 new_block_items.append(stmt)
 
             i += 1
@@ -108,12 +105,12 @@ class PragmaToSIMDTransformer(NodeTransformer):
 
     def transform_pragma_loop(self, for_loop, pragma_text):
         def get_args(pragma_text):
-            # 使用正则表达式匹配 input 和 output 参数
-            pattern = r"input\[(.*?)\].*?output\[(.*?)\]"
+            # Use regular expressions to match input and output parameters.
+            pattern = r"input\\[(.*?)\\].*?output\\[(.*?)\\]"
             match = re.search(pattern, pragma_text)
 
             if match:
-                # 提取 input 和 output 参数
+                # Extract the input and output parameters.
                 input_params = match.group(1).split(", ")
                 output_params = match.group(2).split(", ")
                 return output_params, input_params
@@ -125,9 +122,11 @@ class PragmaToSIMDTransformer(NodeTransformer):
         assert input_params is not None
         args = self.extract_argments(for_loop)
         # args = output_params + input_params
-        # 重置上界列表并访问 for_loop 以填充 self.loop_exts
+        # Reset the upper limit list and access the for_loop to populate
+        # self.loop_exts.
         self.loop_exts = []
-        self.visit(for_loop)  # 递归访问 for_loop 的子节点以触发 visit_For
+        # Recursively access the child nodes of for_loop to trigger visit_For.
+        self.visit(for_loop)
         """根据 pragma 生成对应的指令，替换 for 循环."""
         if "memory" in pragma_text:
             src_dir = (
@@ -182,10 +181,10 @@ class PragmaToSIMDTransformer(NodeTransformer):
                 ),
             )
         else:
-            # 如果 pragma 不匹配，返回原始 for 循环
+            # If the pragma does not match, return to the original for loop.
             return for_loop
 
-        # 将函数调用包装在一个代码块中
+        # Wrap the function call in a code block.
         return transformed_code
 
     def visit_For(self, node):
@@ -194,58 +193,59 @@ class PragmaToSIMDTransformer(NodeTransformer):
             if isinstance(node.cond.right, c_ast.Constant):
                 upper_bound = node.cond.right.value
                 self.loop_exts.append(upper_bound)
-        # 递归访问嵌套的 for 循环
+        # Recursive access to nested for loops
         if isinstance(node.stmt, c_ast.Compound):
             for stmt in node.stmt.block_items:
                 if isinstance(stmt, c_ast.For):
-                    self.visit(stmt)  # 手动调用 visit 以访问嵌套的 for 循环
+                    # Manually invoke visit to access the nested for loop.
+                    self.visit(stmt)
         return self.generic_visit(node)
 
 
 def ast_tensorization(code, target="mlu"):
-    # 解析代码
+    # Analytical code
     ast = parse_code_ast(code)
 
-    # 进行 PragmaToSIMD 转换
+    # Perform the PragmaToSIMD conversion.
     transformer = PragmaToSIMDTransformer()
     ast = transformer.visit(ast)
 
-    # 输出修改后的代码
+    # Output the modified code.
     tensorized_code = generate_code(ast)
     return make_full_func(tensorized_code, target)
 
 
 if __name__ == "__main__":
-    # 示例代码
+    # Sample code
     code = """
-    void matmul(float *A, float *B, float *C)
+    void matmul(float * A, float * B, float * C)
     {
     __wram__ float B_wram[32768];
     __nram__ float A_nram[512];
     __nram__ float C_nram[64];
 
-    #pragma operation(memory(input[B], output[B_wram]))
-    for (int col = 0; col < 64; col++) {
-        for (int i = 0; i < 512; i++) {
+    # pragma operation(memory(input[B], output[B_wram]))
+    for (int col=0; col < 64; col + +) {
+        for (int i=0; i < 512; i + +) {
             B_wram[i * 64 + col] = B[i * 64 + col];
         }
     }
 
-    #pragma operation(memory(input[A], output[A_wram]))
-    for (int i = 0; i < 512; i++) {
+    # pragma operation(memory(input[A], output[A_wram]))
+    for (int i=0; i < 512; i + +) {
         A_nram[i] = A[(clusterId * 4 + coreId) * 512 + i];
     }
 
-    #pragma operation(matmul(input[A_nram, B_wram], output[C_nram]))
-    for (int col = 0; col < 64; col++) {
+    # pragma operation(matmul(input[A_nram, B_wram], output[C_nram]))
+    for (int col=0; col < 64; col + +) {
         C_nram[(clusterId * 4 + coreId) * 64 + col] = 0.0f;
-        for (int i = 0; i < 512; i++) {
+        for (int i=0; i < 512; i + +) {
             C_nram[col] += A_nram[i] * B_wram[i * 64 + col];
         }
     }
 
-    #pragma operation(memory(input[C_nram], output[C]))
-    for (int col = 0; col < 64; col++) {
+    # pragma operation(memory(input[C_nram], output[C]))
+    for (int col=0; col < 64; col + +) {
         C[(clusterId * 4 + coreId) * 64 + col] = C_nram[col];
     }
     }

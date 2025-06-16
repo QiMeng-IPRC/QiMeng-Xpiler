@@ -5,12 +5,8 @@ from pycparser import c_ast, c_parser
 from falcon.buffer_inline import ast_buffer_inline
 from falcon.simplification import simplify_code
 from falcon.stmt_simplification import ast_stmt_simplification
-from falcon.util import (
-    NodeTransformer,
-    generate_code,
-    make_full_func,
-    parse_code_ast,
-)
+from falcon.util import (NodeTransformer, generate_code, make_full_func,
+                         parse_code_ast)
 
 mlu_file_name = "falcon/documents/mlu_op_tensorization.json"
 cuda_file_name = "falcon/documents/cuda_op_tensorization.json"

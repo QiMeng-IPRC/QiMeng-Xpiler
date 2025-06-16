@@ -35,8 +35,8 @@ devices = jax.local_devices()
 num_devices = len(devices)
 
 logging.basicConfig(
-    level=logging.INFO,  # 设置日志级别
-    format="%(asctime)s - %(levelname)s - %(message)s",  # 设置日志格式
+    level=logging.INFO,  # Set the log level
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Set the log format
 )
 
 
@@ -97,10 +97,10 @@ class State(core.State):
     truncated: Array = jnp.array(False, dtype=jnp.bool_)
     legal_action_mask: Array = jnp.ones(
         11, dtype=jnp.bool_
-    )  # 这里写你的 action 数
+    )  # Enter your action count here.
     observation: Array = jnp.zeros(
         (150,), dtype=jnp.int32
-    )  # 用你实际编码后的 shape
+    )  # Use the shape you actually coded.
     iteration: Array = jnp.array(0, dtype=jnp.int32)
     best_reward: Array = jnp.array(-10000.0, dtype=jnp.float32)
     _step_count: Array = jnp.array(0, dtype=jnp.int32)
@@ -133,7 +133,7 @@ class FalconGo:
         self.output_dir = os.path.join(
             f"{self.source_platform}_{self.target_platform}"
         )
-        # 确保目录存在
+        # Ensure the directory exists.
         os.makedirs(self.output_dir, exist_ok=True)
 
     def perform_action(self, actions):
@@ -171,13 +171,15 @@ class FalconGo:
         return code, np.float32(score)
 
     def perform_action_py(self, action_ids: jnp.ndarray) -> float:
-        # 这是普通Python函数，必须用numpy的tolist()转换动作id
+        # This is a standard Python function; the action ID must be converted
+        # using numpy's tolist() method.
         action_list = [ActionSpace[action_ids]]
         _, reward = self.perform_action(action_list)
         return reward
 
     def step(self, state: State, action_ids: jnp.ndarray) -> State:
-        # 使用 pure_callback异步调用纯 Python 函数获取 reward
+        # Use pure_callback for asynchronous calls to pure Python functions to
+        # obtain rewards.
         reward = io_callback(
             self.perform_action_py,
             jax.ShapeDtypeStruct((), jnp.float32),
@@ -423,35 +425,35 @@ def evaluate(rng_key, model):
     batch_size = config.selfplay_batch_size // num_devices
     keys = jax.random.split(rng_key, batch_size)
 
-    # 初始化环境状态
+    # Initialize the environmental state.
     batch_reset = vmap(env.reset)
     key, subkey = jax.random.split(rng_key)
     subkeys = jax.random.split(subkey, num=1)
     states = batch_reset(subkeys)
 
-    best_rewards = jnp.zeros((1, batch_size))  # 每个episode的最佳奖励
+    best_rewards = jnp.zeros((1, batch_size))  # Best reward for each episode
 
     def body_fn(val):
         keys, states, best_rewards = val
-        # 使用模型预测动作
+        # Use models to predict actions.
         (logits, _), _ = forward.apply(
             model_params, model_state, states.observation, is_eval=True
         )
 
         actions = jnp.argmax(logits, axis=-1)
-        # 执行动作
+        # Execute the action.
         next_states = jax.vmap(env.step)(states, actions)
 
-        # 更新最佳奖励
+        # Update the best rewards.
         new_best = jnp.maximum(best_rewards, next_states.rewards)
         return (keys, next_states, new_best)
 
-    # 运行整个episode
+    # Run the entire episode.
     _, final_states, best_rewards = jax.lax.while_loop(
         lambda x: ~x[1].terminated.all(), body_fn, (keys, states, best_rewards)
     )
 
-    # 返回最终奖励和最佳奖励
+    # Return to the final reward and the best reward.
     return final_states.rewards, best_rewards
 
 
@@ -461,7 +463,7 @@ if __name__ == "__main__":
     key, subkey = jax.random.split(rng_key)
     subkeys = jax.random.split(subkey, num=1)
     global_best_reward = 0.0
-    state_init = env.reset(subkeys[0])  # 不用 vmap
+    state_init = env.reset(subkeys[0])  # No need to use vmap.
     model = forward.init(
         jax.random.PRNGKey(0), state_init.observation[None, :]
     )
@@ -484,18 +486,18 @@ if __name__ == "__main__":
     rng_key = jax.random.PRNGKey(config.seed)
     while True:
         if iteration % config.eval_interval == 0:
-            # 评估
+            # Evaluation
             rng_key, subkey = jax.random.split(rng_key)
             keys = jax.random.split(subkey, num_devices)
 
-            # 获取最终奖励和最佳奖励
+            # Obtain the ultimate reward and the best reward.
             final_R, best_R = evaluate(keys, model)
 
-            # 收集所有设备的结果
+            # Collect the results from all devices.
             all_final_R = final_R.reshape(-1)
             all_best_R = best_R.reshape(-1)
 
-            # 计算评估指标
+            # Calculate evaluation metrics
             avg_reward = jnp.mean(all_final_R).item()
             max_reward = jnp.max(all_final_R).item()
             min_reward = jnp.min(all_final_R).item()
@@ -511,10 +513,10 @@ if __name__ == "__main__":
                 }
             )
 
-            # 保存最佳模型
+            # Save the best model.
             if best_reward > global_best_reward:
                 global_best_reward = best_reward
-                # 保存模型的代码...
+                # Code for saving the model...
 
                 # Store checkpoints
                 model_0, opt_state_0 = jax.tree_util.tree_map(

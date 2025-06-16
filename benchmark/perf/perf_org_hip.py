@@ -17,14 +17,14 @@ def create_hip_perf_func(hip_file):
     with open(hip_file, "r") as f:
         content = f.read()
 
-    # 正则表达式匹配内核调用的行，比如 add<<<numBlocks, blockSize>>>(d_A, d_B, d_C);
+    # The regular expression matches lines with kernel calls, such as add<<<numBlocks, blockSize>>>(d_A, d_B, d_C);
     # TODO(michael): solve the case if the kernel change into another line
-    kernel_call_pattern = r"(\w+<<<.*?>>>\(.*?\);)"  # 匹配具有<<<...>>>的行
+    kernel_call_pattern = r"(\w+<<<.*?>>>\(.*?\);)"  # Match lines containing <<<...>>>
 
-    # 查找所有匹配的行
+    # Find all matching rows.
     matches = re.findall(kernel_call_pattern, content)
     for match in matches:
-        # 插入热身和事件相关代码
+        # Insert warm-up and event-related code.
         event_code = f"""
 // Warm-up the kernel by running it 10 times
 for (int i = 0; i < 10; i++) {{
@@ -50,7 +50,7 @@ hipEventDestroy(start);
 hipEventDestroy(stop);
         """
 
-        # 在内核调用之后插入时间计算代码
+        # Insert time calculation code after the kernel call.
         with open(
             os.path.join(os.getcwd(), "benchmark/macro/hip_macro.txt"), "r"
         ) as f:
@@ -58,14 +58,14 @@ hipEventDestroy(stop);
         content = content.replace('extern "C" void', 'extern "C" float')
         modified_kernel = macro + content.replace(match, event_code)
 
-        # 在主函数的末尾插入 return milliseconds;
-        main_pattern = r'extern "C" float \w+\s*\(.*?\)\s*\{'  # 允许函数参数
+        # Insert "return milliseconds;" at the end of the main function.
+        main_pattern = r'extern "C" float \w+\s*\(.*?\)\s*\{'  # Allow function parameters
         main_match = re.search(
             main_pattern, modified_kernel, re.DOTALL
-        )  # 使用re.DOTALL
+        )  # Use re.DOTALL
 
         if main_match:
-            # 找到主函数的结束位置，以替换最后一个 `}`
+            # Locate the end of the main function to replace the last `}`.
             last_brace_index = modified_kernel.rfind("}")
             if last_brace_index != -1:
                 modified_kernel = (
@@ -77,22 +77,22 @@ hipEventDestroy(stop);
             print("未找到主函数定义。请检查函数名和签名。")
             return
 
-        # 将修改后的内容写回原文件
+        # Write the modified content back to the original file.
         with open(hip_file.replace(".hip", "_bak.hip"), "w") as f:
             f.write(modified_kernel)
 
 
 def perf_unary(name, shape, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
 
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array = np.random.uniform(size=shape).astype(dtype)
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     if name == "rmsnorm":
@@ -119,13 +119,13 @@ def perf_unary(name, shape, function, dtype="float32"):
             ctypes.POINTER(ctypes.c_float),
             ctypes.c_int,
         ]
-        # 调用C函数
+        # Calling a C function
         elapsed_time = function(input_ptr, output_ptr, np.prod(shape))
     return elapsed_time
 
 
 def perf_layernorm(shape1, shape2, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -136,19 +136,19 @@ def perf_layernorm(shape1, shape2, function, dtype="float32"):
         ctypes.c_int,
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array = np.random.uniform(size=shape1).astype(dtype)
     gamma = np.random.uniform(size=shape2).astype(dtype)
     beta = np.random.uniform(size=shape2).astype(dtype)
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     gamma_ptr = gamma.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     beta_ptr = beta.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function
     elapsed_time = function(
         input_ptr, gamma_ptr, beta_ptr, output_ptr, *shape1
     )
@@ -331,7 +331,7 @@ def perf_deformable(shape, function):
         -2, keepdim=True
     )
 
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_int),
@@ -342,7 +342,7 @@ def perf_deformable(shape, function):
     ]
     function.restype = ctypes.c_float
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros(
         (
             value.shape[0],
@@ -352,7 +352,7 @@ def perf_deformable(shape, function):
         "float32",
     )
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     value_ptr = value.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     shapes_ptr = (
         shapes.int().numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_int))
@@ -369,7 +369,7 @@ def perf_deformable(shape, function):
         ctypes.POINTER(ctypes.c_float)
     )
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Call a C function
     elapsed_time = function(
         value_ptr,
         shapes_ptr,
@@ -402,7 +402,7 @@ def perf_pooling(name, shape, kernel, stride, function, dtype="float32"):
     )
     np.prod(shape)
     np.prod(output_np.shape)
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -427,7 +427,7 @@ def perf_pooling(name, shape, kernel, stride, function, dtype="float32"):
 
 
 def perf_scaled_dot_product_attention(shape, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -439,19 +439,19 @@ def perf_scaled_dot_product_attention(shape, function, dtype="float32"):
         ctypes.c_int,
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array_1 = np.random.uniform(size=shape).astype(dtype)
     input_array_2 = np.random.uniform(size=shape).astype(dtype)
     input_array_3 = np.random.uniform(size=shape).astype(dtype)
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array_1)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     input_ptr_1 = input_array_1.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_2 = input_array_2.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_3 = input_array_3.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function.
     elapsed_time = function(
         input_ptr_1, input_ptr_2, input_ptr_3, output_ptr, *shape
     )
@@ -625,14 +625,14 @@ if __name__ == "__main__":
 
     table.append(times)
 
-    # 转置数据
+    # Transpose data
     transposed_data = list(zip(*table))
 
-    # 添加标题行
+    # Add a title row.
     header = ["file", "time(ms)"]
     transposed_data.insert(0, header)
 
-    # 保存为CSV文件
+    # Save as CSV file
     with open("benchmark/perf/hip_output.csv", "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerows(transposed_data)

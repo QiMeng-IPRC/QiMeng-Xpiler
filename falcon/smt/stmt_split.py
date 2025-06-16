@@ -1,36 +1,36 @@
 from pycparser import c_ast
 
 from falcon.smt.const_inline import constant_inline
-from falcon.util import (
-    NodeTransformer,
-    generate_code,
-    make_full_func,
-    parse_code_ast,
-)
+from falcon.util import (NodeTransformer, generate_code, make_full_func,
+                         parse_code_ast)
 
 
 class LoopSplitter(NodeTransformer):
     def visit_Compound(self, node):
-        # 将每个包含多个语句的for循环拆分为单独的循环
+        # Split each for loop containing multiple statements into separate
+        # loops.
         new_block_items = []
         for stmt in node.block_items:
             if isinstance(stmt, c_ast.For):
-                # 检查循环体是否有多个语句
+                # Check if the loop body contains multiple statements.
                 if (
                     isinstance(stmt.stmt, c_ast.Compound)
                     and len(stmt.stmt.block_items) > 1
                 ):
-                    # 判断循环体是否包含声明语句
+                    # Determine whether the loop body contains a declaration
+                    # statement.
                     contains_decl = any(
                         isinstance(item, c_ast.Decl)
                         for item in stmt.stmt.block_items
                     )
 
                     if contains_decl:
-                        # 如果包含声明语句，则保留整个循环体，不进行拆分
+                        # If it contains a declaration statement, keep the
+                        # entire loop body intact without splitting it.
                         new_block_items.append(stmt)
                     else:
-                        # 如果不包含声明语句，则将每个语句拆分为单独的 `for` 循环
+                        # If declaration statements are not included, split
+                        # each statement into separate `for` loops.
                         for single_stmt in stmt.stmt.block_items:
                             new_for = c_ast.For(
                                 init=stmt.init,
@@ -38,17 +38,17 @@ class LoopSplitter(NodeTransformer):
                                 next=stmt.next,
                                 stmt=c_ast.Compound(
                                     [single_stmt]
-                                ),  # 单语句循环体
+                                ),  # Single-statement loop body
                             )
                             new_block_items.append(new_for)
                 else:
-                    # 如果循环体只有一个语句，则直接添加
+                    # If the loop contains only one statement, add it directly.
                     new_block_items.append(stmt)
             else:
-                # 非循环语句保持不变
+                # Non-looping statements remain unchanged.
                 new_block_items.append(stmt)
 
-        # 用拆分后的循环更新块内语句
+        # Update the statements within the block using the split loop.
         node.block_items = new_block_items
         return self.generic_visit(node)
 

@@ -1,11 +1,7 @@
 from pycparser import c_ast
 
-from falcon.util import (
-    NodeTransformer,
-    add_memory_prefix,
-    generate_code,
-    parse_code_ast,
-)
+from falcon.util import (NodeTransformer, add_memory_prefix, generate_code,
+                         parse_code_ast)
 
 
 class LoopVisitor(c_ast.NodeVisitor):
@@ -17,13 +13,14 @@ class LoopVisitor(c_ast.NodeVisitor):
         start_cache = False
         for item in node.block_items:
             if isinstance(item, c_ast.Pragma) and "__bang" in item.string:
-                # 检测到 #pragma 行，表示需要进行缓存操作
+                # The detection of a #pragma line indicates that caching
+                # operations are required.
                 start_cache = True
                 # self.cache_node[item.string] = None
             elif isinstance(item, c_ast.For) and start_cache:
                 # self.cache_node[item.string] = item
                 self.cache_size.append(item.cond.right.value)
-                start_cache = False  # 重置标志
+                start_cache = False  # Reset flag
         self.generic_visit(node)
 
 
@@ -35,7 +32,9 @@ class CacheTransformationVisitor(NodeTransformer):
 
     def visit_FuncDef(self, node):
         """在函数定义节点内创建缓存缓冲区，并添加缓存加载和写回逻辑."""
-        self.create_cache_buffers(node)  # 在函数开头创建缓存缓冲区
+        self.create_cache_buffers(
+            node
+        )  # Create a cache buffer at the beginning of the function.
         return node
 
     def create_cache_buffers(self, node):
@@ -43,7 +42,8 @@ class CacheTransformationVisitor(NodeTransformer):
         size_param = c_ast.Constant(type="int", value=self.cache_size[0])
         declarations = []
 
-        # 根据 space_map 中的 input 和 output 动态创建 NRAM 缓冲区
+        # Dynamically create NRAM buffers based on the input and output in
+        # space_map.
         for mapping in self.space_map:
             for var_name, location in mapping.get("input", {}).items():
                 nram_decl = c_ast.Decl(
@@ -89,7 +89,7 @@ class CacheTransformationVisitor(NodeTransformer):
                 )
                 declarations.append(nram_decl)
 
-        # 插入到函数体的开头
+        # Insert at the beginning of the function body.
         node.body.block_items = declarations + node.body.block_items
         self.generic_visit(node)
 
@@ -99,21 +99,22 @@ class CacheTransformationVisitor(NodeTransformer):
         start_cache = False
         for item in node.block_items:
             if isinstance(item, c_ast.Pragma) and "__bang" in item.string:
-                # 检测到 #pragma 行，表示需要进行缓存操作
+                # The detection of a #pragma line indicates that caching
+                # operations are required.
                 start_cache = True
             elif isinstance(item, c_ast.For) and start_cache:
                 reads, writes = self.extract_index_expression(item)
-                # 插入缓存读取（读操作）
+                # Insert cache read (read operation)
                 read_items = self.create_read_operations(item, reads)
-                # 插入原始的 for 循环
+                # Insert the original for loop.
                 new_block_items.extend(read_items)
-                # 修改循环体中的变量
+                # Modify the variable in the loop body.
                 new_item = self.modify_for_loop_body(item, reads, writes)
                 new_block_items.append(new_item)
-                # 插入缓存写回（写操作）
+                # Insert cache write-back (write operation)
                 write_items = self.create_write_operations(item, writes)
                 new_block_items.extend(write_items)
-                start_cache = False  # 重置标志
+                start_cache = False  # Reset flag
             else:
                 new_block_items.append(item)
         node.block_items = new_block_items
@@ -239,9 +240,9 @@ class CacheTransformationVisitor(NodeTransformer):
 
 
 def ast_auto_cache(code, space_map, target="mlu"):
-    # 解析代码
+    # Analytical code
     ast = parse_code_ast(code)
-    # 进行缓存加载和写回插入
+    # Perform cache loading and write-back insertion.
     cache_visitor = LoopVisitor()
     cache_visitor.visit(ast)
     transformer = CacheTransformationVisitor(
@@ -249,7 +250,7 @@ def ast_auto_cache(code, space_map, target="mlu"):
     )
     ast = transformer.visit(ast)
 
-    # 输出最终代码
+    # Output the final code.
     cache_code = generate_code(ast)
     if target == "mlu":
         return add_memory_prefix(cache_code)
@@ -258,7 +259,7 @@ def ast_auto_cache(code, space_map, target="mlu"):
 
 
 if __name__ == "__main__":
-    # 示例代码和 space_map
+    # Example code and space_map
     code = """
     void __bang_add(float *A, float *C, float *B) {
         #pragma __bang_add(input[Nram, Nram], output[Nram])

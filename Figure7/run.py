@@ -2,14 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# 1. 读取CSV数据，处理多层次列标题
+# 1. Read CSV data, handle multi-level column headers.
 df = pd.read_csv('2.csv', header=[0, 1])
 
-# 2. 打印原始多级列名以调试
+# 2. Print the original multi-level column names for debugging purposes.
 print("原始多级列名:")
 print(df.columns)
 
-# 3. 平坦化多级列名，将其合并为单级列名，忽略 'Unnamed' 部分
+# 3. Flatten multi-level column names into single-level column names, ignoring the 'Unnamed' parts.
 new_columns = []
 last_main = ''
 
@@ -28,44 +28,44 @@ for col in df.columns:
 
 df.columns = new_columns
 
-# 4. 打印平坦化后的列名以确认
+# 4. Print the flattened column names for confirmation.
 print("\n平坦化后的列名:")
 print(df.columns)
 
-# 5. 设置全局字体大小和图表参数
+# 5. Set global font size and chart parameters
 plt.rcParams.update({
-    'font.size': 16,             # 全局字体大小
-    'axes.labelsize': 18,        # 轴标签字体大小
-    'xtick.labelsize': 14,       # X轴刻度字体大小
-    'ytick.labelsize': 14,       # Y轴刻度字体大小
-    'legend.fontsize': 20,       # 图例字体大小 (增大)
-    'figure.figsize': (20, 15)   # 图表尺寸
+    'font.size': 16,             # Overall font size
+    'axes.labelsize': 18,        # Axis label font size
+    'xtick.labelsize': 14,       # X-axis scale font size
+    'ytick.labelsize': 14,       # Y-axis scale font size
+    'legend.fontsize': 20,       # Legend font size (increase)
+    'figure.figsize': (20, 15)   # Chart size
 })
 
-# 6. 创建四个子图，纵向排列，共享X轴，使用 constrained_layout=False
+# 6. Create four subplots, arranged vertically, sharing the X-axis, with constrained_layout set to False.
 fig, axes = plt.subplots(4, 1, figsize=(20, 15), sharex=True, constrained_layout=False)
 
-fig.patch.set_facecolor('white')  # 设置背景为白色
+fig.patch.set_facecolor('white')  # Set the background to white.
 
-# 7. 创建布尔掩码，包含所有行，包括“Overall”
+# 7. Create a Boolean mask that includes all rows containing "Overall".
 mask = df['Type'].notna()
 
-# 8. 获取算子类型，包括“Overall”
+# 8. Obtain the operator type, including "Overall".
 operators = df.loc[mask, 'Type']
-x = np.arange(len(operators))  # 算子的数量
+x = np.arange(len(operators))  # The number of operators
 
-# 9. 在最后一组数据前增加空隙
+# 9. Add a gap before the last set of data.
 x_new = x.copy()
 if len(x_new) > 1:
-    x_new[-1] += 1  # 将最后一组数据向右移动1单位，创建空隙
+    x_new[-1] += 1  # Move the last set of data one unit to the right to create a gap.
 
-# 10. 柱状图的宽度
+# 10. The width of the bar chart
 width = 0.35
 
-# 11. PyTorch性能固定为1
+# 11. PyTorch performance is set to 1.
 pytorch_perf = [1] * len(operators)
 
-# 12. 定义转换类型及其对应的列名和转换名称
+# 12. Define the conversion types, corresponding column names, and conversion names.
 transitions = ['C->CUDA', 'CUDA->BANG', 'CUDA->HIP', 'CUDA->C']
 transition_names = [
     'C with VNNI → CUDA C',
@@ -74,73 +74,73 @@ transition_names = [
     'CUDA C → C with VNNI'
 ]
 
-# 13. 初始化图例句柄和标签
+# 13. Initialize legend handles and labels.
 handles = []
 labels = []
 
-# 14. 迭代绘制每个子图
+# 14. Iteratively draw each subplot.
 for idx, (transition, transition_name) in enumerate(zip(transitions, transition_names)):
     ax = axes[idx]
 
-    # 15. 构造列名
+    # 15. Construct column names
     corrected_cases_col = f'{transition} Corrected cases'
     speedup_col = f'{transition} SpeedUp Over Pytorch'
 
-    # 16. 检查列是否存在，避免KeyError
+    # 16. Check if the column exists to avoid KeyError.
     if corrected_cases_col not in df.columns or speedup_col not in df.columns:
         print(f'列 "{corrected_cases_col}" 或 "{speedup_col}" 未找到。请检查列名。')
         continue
 
-    # 17. 获取对应转换的 Corrected cases 和 SpeedUp Over Pytorch，包含“Overall”行
+    # 17. Obtain the corresponding conversion for Corrected cases and SpeedUp Over Pytorch, including the "Overall" row.
     corrected_cases = df.loc[mask, corrected_cases_col].fillna(0).values
     speedup = df.loc[mask, speedup_col].fillna(0).values
 
-    # 18. 检查数据长度是否匹配
+    # 18. Check if the data lengths match.
     if len(speedup) != len(x_new):
         print(f'警告: "{transition} SpeedUp Over Pytorch" 的长度 {len(speedup)} 与 operators 的长度 {len(x_new)} 不匹配。')
         continue
 
-    # 19. 绘制柱状图
-    bars1 = ax.bar(x_new - width / 2, pytorch_perf, width, label='PyTorch', color='orange', zorder=2)  # PyTorch为橙色
-    bars2 = ax.bar(x_new + width / 2, speedup, width, label='QiMeng-Xpiler', color='purple', zorder=2)        # Falcon为紫色
+    # 19. Draw a bar chart.
+    bars1 = ax.bar(x_new - width / 2, pytorch_perf, width, label='PyTorch', color='orange', zorder=2)  # PyTorch is orange.
+    bars2 = ax.bar(x_new + width / 2, speedup, width, label='QiMeng-Xpiler', color='purple', zorder=2)        # Falcon is for purple.
 
-    # 20. 设置X轴刻度
+    # 20. Set the X-axis scale.
     ax.set_xticks(x_new)
     ax.set_xticklabels(operators, rotation=45, ha='right')
 
-    # 21. 添加网格线
+    # 21. Add grid lines
     ax.yaxis.grid(True, linestyle='--', linewidth=0.5)
 
-    # 22. 创建第二个Y轴用于绘制折线图
+    # 22. Create a second Y-axis for plotting the line chart.
     ax2 = ax.twinx()
-    line = ax2.plot(x_new, corrected_cases, color='red', marker='o', label='Corrected Cases', zorder=3)[0]  # Corrected Cases为红色
+    line = ax2.plot(x_new, corrected_cases, color='red', marker='o', label='Corrected Cases', zorder=3)[0]  # Corrected Cases are in red.
 
-    # 23. 设置右y轴固定范围并设置刻度
+    # 23. Set a fixed range for the right y-axis and configure the scale.
     ax2.set_ylim(0, 10)
     ax2.set_yticks([0, 8])
 
-    # 24. 移除折线点数据标签
-    # (无注释)
+    # 24. Remove data labels from the line chart points.
+    # (No comment)
 
-    # 25. 添加子图标签和转换名称
+    # 25. Add subfigure labels and transform names.
     ax.text(0.5, 1.05, f"({chr(97+idx)}) {transition_name}", transform=ax.transAxes, fontsize=20, fontweight='bold', ha='center')
 
-    # 26. 仅在第一个子图中收集图例句柄
+    # 26. Collect legend handles only in the first subplot.
     if idx == 0:
         handles.extend([bars1[0], bars2[0], line])
         labels.extend(['PyTorch', 'QiMeng-Xpiler', 'Corrected Cases'])
 
-# 27. 创建统一的图例，位于整个图表的顶部中心，增大字体
+# 27. Create a unified legend, positioned at the top center of the entire chart, and increase the font size.
 fig.legend(handles=handles, labels=labels, loc='upper center', fontsize=24, ncol=3)
 
-# 28. 添加共享的左侧和右侧纵坐标标题，并确保其位于图表外侧
+# 28. Add shared y-axis titles on the left and right sides, ensuring they are positioned outside the chart.
 fig.text(0.02, 0.5, 'Normalized Performance', va='center', rotation='vertical', fontsize=18, ha='center')
 fig.text(0.98, 0.5, 'Corrected Cases', va='center', rotation='vertical', fontsize=18, ha='center')
 
-# 29. 调整整体布局，确保图例和子图标签不被遮挡
-# 保持用户指定的边距
+# 29. Adjust the overall layout to ensure that legends and subfigure labels are not obscured.
+# Maintain the user-specified margins.
 fig.subplots_adjust(left=0.05, right=0.95, top=0.90, bottom=0.2, hspace=0.3)
 
-# 30. 显示图表
+# 30. Display the chart.
 #plt.show()
 fig.savefig("Figure_7-3_new.pdf")

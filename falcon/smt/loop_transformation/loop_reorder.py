@@ -14,16 +14,16 @@ class LoopReorderVisitor(c_ast.NodeVisitor):
         self.generic_visit(node)
 
     def reorder_loops(self):
-        # 遍历所有的 for 循环，寻找可以交换的嵌套循环
+        # Traverse all the for loops to find nested loops that can be swapped.
         for node in self.for_loops:
             if isinstance(node.stmt, c_ast.Compound) and node.stmt.block_items:
                 first_item = node.stmt.block_items[0]
                 if isinstance(first_item, c_ast.For):
-                    # 随机决定是否交换
+                    # Randomly decide whether to exchange.
                     if random.choice([True, False]):
                         inner_loop = first_item
                         stmt_node = inner_loop.stmt
-                        # 交换外层和内层循环
+                        # Swap the outer and inner loops
                         new_inner_loop = c_ast.For(
                             init=node.init,
                             cond=node.cond,
@@ -40,7 +40,7 @@ class LoopReorderVisitor(c_ast.NodeVisitor):
 
 def ast_loop_reorder(c_code):
     ast = parse_code_ast(c_code)
-    # 创建访问者实例并进行循环交换
+    # Create a visitor instance and perform cyclic exchange.
     visitor = LoopReorderVisitor()
     visitor.visit(ast)
     visitor.reorder_loops()

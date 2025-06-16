@@ -94,7 +94,7 @@ def main():
             if (
                 success
                 and hasattr(output, "stdout")
-                and "验证通过！" in output.stdout
+                and "Verification successful!" in output.stdout
             ):
                 success_count += 1
             else:

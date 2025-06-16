@@ -2,12 +2,8 @@ import re
 
 from pycparser import c_ast
 
-from falcon.util import (
-    NodeTransformer,
-    generate_code,
-    parse_code_ast,
-    remove_target_prefix,
-)
+from falcon.util import (NodeTransformer, generate_code, parse_code_ast,
+                         remove_target_prefix)
 
 
 class SimplifyConstants(NodeTransformer):
@@ -18,17 +14,19 @@ class SimplifyConstants(NodeTransformer):
         if isinstance(node.cond.right, c_ast.Constant):
             self.for_loop_map[node.init.decls[0].name] = node.cond.right.value
 
-        # 检查for循环中的条件表达式是否可以被简化
+        # Check if the conditional expression in the for loop can be
+        # simplified.
         if isinstance(node.cond, c_ast.BinaryOp) and node.cond.op == "<":
             if isinstance(node.cond.right, c_ast.BinaryOp):
-                # 尝试折叠常量表达式，例如 256 * 1024
+                # Attempt to fold constant expressions, such as 256 * 1024.
                 if isinstance(
                     node.cond.right.left, c_ast.Constant
                 ) and isinstance(node.cond.right.right, c_ast.Constant):
                     result = self.visit_BinaryOp(node.cond.right)
                     node.cond.right = result
 
-        # 处理for循环中的if语句，尝试将其合并到for循环的条件中
+        # Handle the if statement within the for loop by attempting to merge it
+        # into the condition of the for loop.
         if (
             isinstance(node.stmt, c_ast.Compound)
             and len(node.stmt.block_items) == 1
@@ -45,20 +43,20 @@ class SimplifyConstants(NodeTransformer):
                     and int(if_node.cond.right.value)
                     <= int(node.cond.right.value)
                 ):
-                    # 合并if条件到for循环中
+                    # Merge the if condition into the for loop.
                     node.cond.right = if_node.cond.right
                     node.stmt = if_node.iftrue
 
         return self.generic_visit(node)
 
     def visit_BinaryOp(self, node):
-        # 首先递归地化简左右子节点
+        # First, recursively simplify the left and right child nodes.
         if isinstance(node.left, c_ast.BinaryOp):
             node.left = self.visit_BinaryOp(node.left)
         if isinstance(node.right, c_ast.BinaryOp):
             node.right = self.visit_BinaryOp(node.right)
 
-        # 检查是否是可以简化的二元操作符
+        # Check if it is a binary operator that can be simplified.
         if node.op in ("*", "+", "-", "/"):
             if isinstance(node.left, c_ast.Constant) and isinstance(
                 node.right, c_ast.Constant
@@ -74,13 +72,13 @@ class SimplifyConstants(NodeTransformer):
                 elif node.op == "/":
                     result = (
                         left_val // right_val if right_val != 0 else 0
-                    )  # 避免除零
+                    )  # Avoid division by zero.
                 return c_ast.Constant("int", value=str(result))
 
         return self.generic_visit(node)
 
     def visit_If(self, node):
-        # 访问if语句，尝试检查是否可以优化
+        # Visit the if statement and try to check if it can be optimized.
         if (
             isinstance(node.cond, c_ast.BinaryOp)
             and node.cond.op == "<"
@@ -92,7 +90,7 @@ class SimplifyConstants(NodeTransformer):
         return self.generic_visit(node)
 
     def visit_Cast(self, node):
-        # 尝试移除无用的类型转换
+        # Attempt to remove unnecessary type conversions.
         if (
             isinstance(node.to_type.type.type, c_ast.IdentifierType)
             and node.to_type.type.type.names[0] == "int"
@@ -103,16 +101,16 @@ class SimplifyConstants(NodeTransformer):
 
 
 def simplify_code(source_code):
-    # 移除所有 C/C++ 样式的注释
+    # Remove all C/C++ style comments.
     source_code = re.sub(r"//.*?\n|/\*.*?\*/", "", source_code, flags=re.S)
     source_code = remove_target_prefix(source_code)
-    # 解析 C 代码
+    # Analyze C code
     ast = parse_code_ast(source_code)
-    # 创建自定义访问器实例
+    # Create a custom accessor instance.
     visitor = SimplifyConstants()
-    # 访问 AST 以进行常量折叠
+    # Visit the AST for constant folding.
     visitor.visit(ast)
-    # 生成简化后的 C 代码
+    # Generate simplified C code.
     return generate_code(ast)
 
 

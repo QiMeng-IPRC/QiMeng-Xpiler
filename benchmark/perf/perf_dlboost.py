@@ -16,17 +16,17 @@ def perf_function(file_name):
         original_function = f.read()
         f.close()
 
-    # 正则表达式提取参数部分
+    # Extracting parameters using regular expressions.
     function_signature_pattern = r"void (\w+)\(([^()]*)\)"
     match = re.search(function_signature_pattern, original_function, re.DOTALL)
     if not match:
         raise ValueError("Could not find function signature.")
 
-    # 获取函数名称和参数列表
+    # "Obtain the function name and parameter list."
     kernel_name = match.group(1)
     param_list_str = match.group(2)
 
-    # 构造参数列表
+    # Constructor parameter list
     params = [param_str.strip() for param_str in param_list_str.split(",")]
     param_list = ", ".join(
         [
@@ -35,7 +35,7 @@ def perf_function(file_name):
         ]
     )
 
-    # 构造新的计时函数模板
+    # Construct a new timing function template.
     cpp_pef_template = Template(
         """
     #include <sys/time.h>
@@ -71,14 +71,14 @@ def perf_function(file_name):
     )
 
     pattern = r'extern\s*"C"\s*'
-    # 使用 re.sub 替换匹配部分为空字符串
+    # Use re.sub to replace the matched part with an empty string.
     cleaned_code = re.sub(pattern, "", original_function)
-    # 使用正则表达式替换所有形式的 float* 和 int*
+    # Replace all forms of float* and int* using regular expressions.
     called_param_list = re.sub(
         r"\s*\*\s*|\s*(?:float|int|double|half)\s*\*", "", param_list
     )
 
-    # 动态替换模板
+    # Dynamic template replacement
     new_code = cpp_pef_template.substitute(
         kernel_name=kernel_name,
         param_list=param_list,
@@ -86,7 +86,7 @@ def perf_function(file_name):
         original_function=cleaned_code,
     )
 
-    # 保存生成的 C++ 文件
+    # Save the generated C++ file.
     output_file = file_name.replace(".cpp", "_bak.cpp")
     with open(output_file, "w") as f:
         f.write(new_code)
@@ -100,22 +100,22 @@ def perf_pipeline(file_name):
 
 
 def perf_unary(shape, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array = np.random.uniform(size=shape).astype(dtype)
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Calling a C function
     elapsed_time = function(input_ptr, output_ptr)
     return elapsed_time
 
@@ -128,7 +128,7 @@ def perf_binary(shape_A, shape_B, shape_C, function, dtype="float32"):
     A_ptr = A.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     B_ptr = B.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
 
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -160,7 +160,7 @@ def perf_deformable(shape, function):
         -2, keepdim=True
     )
 
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_int),
@@ -170,7 +170,7 @@ def perf_deformable(shape, function):
     ]
     function.restype = ctypes.c_float
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros(
         (
             value.shape[0],
@@ -180,7 +180,7 @@ def perf_deformable(shape, function):
         "float32",
     )
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     value_ptr = value.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     shapes_ptr = (
         shapes.int().numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_int))
@@ -192,7 +192,7 @@ def perf_deformable(shape, function):
         ctypes.POINTER(ctypes.c_float)
     )
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function
     elapsed_time = function(
         value_ptr,
         shapes_ptr,
@@ -216,7 +216,7 @@ def perf_pooling(shape, kernel, stride, function, dtype="float32"):
         ctypes.POINTER(ctypes.c_float)
     )
 
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -228,7 +228,7 @@ def perf_pooling(shape, kernel, stride, function, dtype="float32"):
 
 
 def perf_scaled_dot_product_attention(shape, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -236,19 +236,19 @@ def perf_scaled_dot_product_attention(shape, function, dtype="float32"):
         ctypes.POINTER(ctypes.c_float),
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array_1 = np.random.uniform(size=shape).astype(dtype)
     input_array_2 = np.random.uniform(size=shape).astype(dtype)
     input_array_3 = np.random.uniform(size=shape).astype(dtype)
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array_1)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     input_ptr_1 = input_array_1.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_2 = input_array_2.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_3 = input_array_3.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Calling a C function
     elapsed_time = function(input_ptr_1, input_ptr_2, input_ptr_3, output_ptr)
     return elapsed_time
 
@@ -261,21 +261,21 @@ def perf_layernorm(shape, function, dtype="float32"):
         ctypes.POINTER(ctypes.c_float),
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     dtype = "float32"
     input_array = np.random.uniform(size=shape).astype(dtype)
     gamma_array = np.random.uniform(size=shape[-1:]).astype(dtype)
     beta_array = np.random.uniform(size=shape[-1:]).astype(dtype)
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     gamma_ptr = gamma_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     beta_ptr = beta_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function.
     elapsed_time = function(input_ptr, gamma_ptr, beta_ptr, output_ptr)
     return elapsed_time
 

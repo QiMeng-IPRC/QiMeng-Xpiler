@@ -9,16 +9,16 @@ from benchmark.utils import run_dlboost_compilation as run_compilation
 
 
 def ref_program(x, gamma, beta, eps=1e-5):
-    # 使用 PyTorch 计算层归一化
+    # Using PyTorch to compute layer normalization.
     x_tensor = torch.tensor(x)
     layer_norm = torch.nn.LayerNorm(
         x_tensor.size()[1:]
-    )  # 初始化 LayerNorm，保持维度
+    )  # Initialize LayerNorm, maintaining dimensions.
     x_normalized = layer_norm(x_tensor)
 
-    # 计算输出
+    # Calculate the output.
     out = gamma * x_normalized + beta
-    return out  # 返回 numpy 格式的输出以便接口一致
+    return out  # Return the output in numpy format for interface consistency.
 
 
 if __name__ == "__main__":
@@ -49,11 +49,11 @@ if __name__ == "__main__":
     success, output = run_compilation(so_name, file_name)
     os.remove(file_name)
 
-    # 加载和调用C代码（如果需要）
+    # Load and invoke C code (if necessary).
     lib = ctypes.CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name)
 
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -62,18 +62,18 @@ if __name__ == "__main__":
     ]
     function.restype = None
 
-    # 创建输入数组
+    # Create the input array.
     input_array = torch.randn(shape)
     gamma_array = torch.randn(shape[-1:])
     beta_array = torch.randn(shape[-1:])
 
-    # 使用修改后的 ref_program 进行层归一化计算
+    # Use the modified ref_program for layer normalization calculation.
     expected_output = ref_program(input_array, gamma_array, beta_array)
 
-    # 创建输出数组
+    # Create the output array.
     output_array = torch.zeros(shape)
 
-    # 将输入数组和输出数组转换为 C 指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.numpy().ctypes.data_as(
         ctypes.POINTER(ctypes.c_float)
     )
@@ -87,10 +87,10 @@ if __name__ == "__main__":
         ctypes.POINTER(ctypes.c_float)
     )
 
-    # 如果调用 C 函数可以保留：
+    # If the call to the C function can be preserved:
     function(input_ptr, gamma_ptr, beta_ptr, output_ptr)
 
-    # 验证结果
+    # Verification result
     torch.allclose(
         output_array,
         expected_output,
@@ -98,5 +98,5 @@ if __name__ == "__main__":
         atol=1e-03,
         equal_nan=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

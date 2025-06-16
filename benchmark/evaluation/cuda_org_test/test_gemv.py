@@ -56,7 +56,7 @@ if __name__ == "__main__":
     os.remove(file_name)
     lib = ctypes.CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name + "_kernel")
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -77,5 +77,5 @@ if __name__ == "__main__":
         err_msg="",
         verbose=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

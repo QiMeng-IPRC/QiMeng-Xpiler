@@ -89,7 +89,7 @@ def main():
         for future in tqdm(as_completed(future_to_file), total=total):
             future_to_file[future]
             file_path, output = future.result()
-            if hasattr(output, "stdout") and "验证通过！" in output.stdout:
+            if hasattr(output, "stdout") and "Verification successful!" in output.stdout:
                 success_count += 1
             else:
                 # print failures or warnings

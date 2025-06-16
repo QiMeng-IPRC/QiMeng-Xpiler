@@ -14,7 +14,7 @@ class CallNodeTransformer(c_ast.NodeVisitor):
 
 def visit_func_call(code, target=None):
     ast = parse_code_ast(code, target=target)
-    # 统计循环层数
+    # Count the number of loop layers.
     loop_visitor = CallNodeTransformer()
     loop_visitor.visit(ast)
     return loop_visitor.func_call
@@ -22,10 +22,11 @@ def visit_func_call(code, target=None):
 
 class CompoundNodeTransformer(c_ast.NodeVisitor):
     def __init__(self):
-        self.has_compound_stmt = False  # 用于标记是否遇到 compound statement
+        # Used to mark whether a compound statement is encountered.
+        self.has_compound_stmt = False
 
     def visit_Compound(self, node):
-        # 检查 compound statement 是否有多个语句
+        # Check if the compound statement contains multiple statements.
         if len(node.block_items) > 1:
             self.has_compound_stmt = True
         self.generic_visit(node)

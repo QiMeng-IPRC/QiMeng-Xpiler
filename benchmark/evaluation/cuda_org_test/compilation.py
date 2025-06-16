@@ -12,7 +12,7 @@ from benchmark.utils import run_cuda_compilation as run_compilation
 def compile_file(file_name):
     name_no_ext, _ = os.path.splitext(os.path.basename(file_name))
 
-    # 1) 读取原始代码 + 加入宏
+    # 1) Read the original code + incorporate macros
     with open(file_name, "r") as f:
         code = f.read()
     macro_path = os.path.join("benchmark", "macro", "cuda_macro.txt")
@@ -20,20 +20,20 @@ def compile_file(file_name):
         macro = f.read()
     full_code = macro + code
 
-    # 2) 写入备份 .cu
+    # 2) Write backup .cu
     bak_file = os.path.join(
         os.path.dirname(file_name), f"{name_no_ext}_bak.cu"
     )
     with open(bak_file, "w") as f:
         f.write(full_code)
 
-    # 3) 构造 .so 路径（与 bak_file 在同一目录）
+    # 3) Construct the .so path (in the same directory as bak_file).
     so_path = os.path.join(os.path.dirname(bak_file), f"{name_no_ext}.so")
 
-    # 4) 编译
+    # 4) Compilation
     success, output = run_compilation(so_path, bak_file)
 
-    # 5) 清理
+    # 5) Clean up
     os.remove(bak_file)
     if success and os.path.exists(so_path):
         os.remove(so_path)
@@ -55,14 +55,14 @@ def main():
     )
     args = parser.parse_args()
 
-    # 从命令行参数获取目录，然后查找所有 .cu
+    # Obtain the directory from the command line arguments, then search for all .cu files.
     pattern = os.path.join(args.src_dir, "*.cu")
     files = glob.glob(pattern)
     if not files:
         print(f"[WARN] No .cu files found in {args.src_dir}", file=sys.stderr)
         return
 
-    # 并行编译并统计
+    # Parallel compilation and statistics.
     with ThreadPoolExecutor() as executor:
         results = list(
             tqdm(executor.map(compile_file, files), total=len(files))

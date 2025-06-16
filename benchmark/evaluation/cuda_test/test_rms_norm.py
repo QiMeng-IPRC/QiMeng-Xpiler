@@ -28,7 +28,7 @@ def verify_rms_norm(base_name, file, shape):
     lib = ctypes.CDLL(os.path.join(os.getcwd(), so_name))
     name = base_name.split("_")[0]
     function = getattr(lib, name + "_kernel")
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -49,7 +49,7 @@ def verify_rms_norm(base_name, file, shape):
         err_msg="",
         verbose=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     subprocess.run(["rm", so_name])
 
 

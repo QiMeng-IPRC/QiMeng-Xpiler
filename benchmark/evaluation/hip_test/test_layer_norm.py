@@ -31,7 +31,7 @@ if __name__ == "__main__":
     os.remove(file_name)
     lib = ctypes.CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name + "_kernel")
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -41,22 +41,22 @@ if __name__ == "__main__":
         ctypes.c_int,
     ]
     function.restype = None
-    # 创建输入数组
+    # Create the input array.
     dtype = "float32"
     input_array = np.random.uniform(size=shape).astype(dtype)
     gamma_array = np.random.uniform(size=shape[-1:]).astype(dtype)
     beta_array = np.random.uniform(size=shape[-1:]).astype(dtype)
     expected_output = ref_program(input_array, gamma_array, beta_array)
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     gamma_ptr = gamma_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     beta_ptr = beta_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Calling a C function
     function(
         input_ptr,
         gamma_ptr,
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         np.prod(shape),
         np.prod(shape[-1:]),
     )
-    # 验证结果
+    # Verification results
 
     np.testing.assert_allclose(
         output_array,
@@ -76,5 +76,5 @@ if __name__ == "__main__":
         err_msg="",
         verbose=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

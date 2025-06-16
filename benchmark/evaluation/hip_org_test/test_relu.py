@@ -45,27 +45,27 @@ if __name__ == "__main__":
     os.remove(file_name)
     lib = CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name + "_kernel")
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
         ctypes.c_int,
     ]
     function.restype = None
-    # 创建输入数组
+    # Create the input array.
     dtype = "float32"
     input_array = np.random.uniform(size=shape).astype(dtype)
     expected_output = ref_program(torch.from_numpy(input_array))
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function
     function(input_ptr, output_ptr, np.prod(shape))
-    # 验证结果
+    # Verification results
 
     np.testing.assert_allclose(
         output_array,
@@ -77,5 +77,5 @@ if __name__ == "__main__":
         verbose=True,
     )
 
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

@@ -74,7 +74,7 @@ def perf_elementwise(name, shape):
 
     op_name = name.split("_")[0]
     if op_name == "add":
-        # 使用 timeit 进行多次测量，设置执行次数为 100
+        # Use timeit to perform multiple measurements, setting the number of executions to 100.
         execution_time = timeit.timeit(test_add, number=100)
         print(f"{name} execution time: {execution_time * 10} ms")
 
@@ -86,9 +86,9 @@ def perf_elementwise(name, shape):
 
 def perf_pooling(name, shape, kernel, stride):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 创建一个随机的输入张量
+    # Create a random input tensor.
     x = torch.randn(shape, device=device)
-    # 定义 MaxPooling 操作
+    # Define the MaxPooling operation.
     op_name = name.split("_")[0]
 
     pool = torch.nn.AvgPool2d(kernel_size=kernel, stride=stride)
@@ -105,19 +105,19 @@ def perf_pooling(name, shape, kernel, stride):
                 self.padding = padding
 
             def forward(self, x):
-                # 取反输入
+                # Inverted input
                 x_neg = -x
-                # 执行最大池化
+                # Perform maximum pooling.
                 x_maxpool = F.max_pool2d(
                     x_neg,
                     self.kernel_size,
                     stride=self.stride,
                     padding=self.padding,
                 )
-                # 再取反结果
+                # Reversed result again
                 return -x_maxpool
 
-        # 使用自定义的 MinPool2d
+        # Using a custom MinPool2d
         pool = MinPool2d(kernel_size=kernel, stride=stride)
 
     elif op_name == "sumpool":
@@ -130,23 +130,23 @@ def perf_pooling(name, shape, kernel, stride):
                 self.padding = padding
 
             def forward(self, x):
-                # 使用平均池化
+                # Use average pooling.
                 x_avgpool = F.avg_pool2d(
                     x,
                     kernel_size=self.kernel_size,
                     stride=self.stride,
                     padding=self.padding,
                 )
-                # 乘以池化窗口的大小，获得求和池化效果
+                # Multiply by the size of the pooling window to achieve the effect of sum pooling.
                 return x_avgpool * (self.kernel_size**2)
 
-        # 使用自定义的SumPool2d
+        # Using a custom SumPool2d
         pool = SumPool2d(kernel_size=kernel, stride=stride)
 
     def test_pool():
         pool(x)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_pool, number=100)
     print(f"{name} execution time: {execution_time * 10} ms")
     return execution_time * 10
@@ -154,16 +154,16 @@ def perf_pooling(name, shape, kernel, stride):
 
 def perf_bmm(name, shape_A, shape_B):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 创建随机张量
+    # Create a random tensor.
     A = torch.randn(shape_A, dtype=torch.float16, device=device)
     B = torch.randn(shape_B, dtype=torch.float16, device=device)
 
     def test_gemm():
-        # 执行矩阵乘法操作 (GEMM)
+        # Perform matrix multiplication operation (GEMM).
         torch.matmul(A, B)
-        # 确保 CUDA 操作完成
+        # Ensure CUDA operations are completed.
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_gemm, number=100)
     return execution_time * 10
 
@@ -184,7 +184,7 @@ def perf_activation(name, shape):
     def test_activation():
         activation(x)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_activation, number=100)
     return execution_time * 10
 
@@ -194,7 +194,7 @@ def perf_conv2d_nchw(
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     input_tensor = torch.randn(shape, device=device)
-    # 定义卷积层
+    # Define the convolutional layer.
     conv_layer = torch.nn.Conv2d(
         in_channels=in_channels,
         out_channels=out_channels,
@@ -206,7 +206,7 @@ def perf_conv2d_nchw(
     def test_conv2d():
         conv_layer(input_tensor)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_conv2d, number=100)
     return execution_time * 10
 
@@ -221,45 +221,45 @@ def perf_conv2d_nhwc(
     )
 
     def test_conv2d():
-        # 将输入从 NHWC 转换到 NCHW
+        # Convert the input from NHWC to NCHW.
         input_nchw = input_nhwc.permute(0, 3, 1, 2)
 
-        # 将卷积核从 HWIO (H, W, in_channels, out_channels) 转换到 PyTorch的 OIHW 格式
+        # Convert the kernel from HWIO (H, W, in_channels, out_channels) format to PyTorch's OIHW format.
         weight_oihw = weight_hwio.permute(0, 3, 1, 2)
 
-        # 使用转换后的卷积核和输入进行卷积操作
+        # Perform convolution operations using the transformed convolution kernel and input.
         output_nchw = F.conv2d(
             input_nchw, weight_oihw, stride=stride, padding=padding
         )
 
-        # 将输出从 NCHW 转换回 NHWC
+        # Convert the output from NCHW back to NHWC.
         output_nchw.permute(0, 3, 1, 2)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_conv2d, number=100)
     return execution_time * 10
 
 
 def perf_gemv(name, shape):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 创建随机矩阵和向量 M, N = 1000, 1000
+    # Create random matrix and vector M, N = 1000, 1000.
     matrix = torch.randn(shape, device=device)
     vector = torch.randn(shape[1], device=device)
 
     def test_gemv():
         torch.matmul(matrix, vector)
-        # 或者使用 matrix @ vector
+        # Alternatively, use matrix @ vector.
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_gemv, number=100)
     return execution_time * 10
 
 
 def perf_conv1d(name, shape):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 创建输入张量
+    # Create the input tensor.
     input_tensor = torch.randn(1, shape[1], device=device)
-    # 定义卷积层
+    # Define the convolutional layer.
     conv_layer = torch.nn.Conv1d(
         in_channels=1, out_channels=1, kernel_size=3, stride=1, padding=0
     ).to(device)
@@ -267,7 +267,7 @@ def perf_conv1d(name, shape):
     def test_conv1d():
         conv_layer(input_tensor)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_conv1d, number=100)
     return execution_time * 10
 
@@ -280,55 +280,55 @@ def perf_depthwise_conv2d(name, shape, kernel_size):
     )
 
     def test_depthwise_conv2d():
-        # 输入是 (height, width, in_depth)，添加一个批次维度变成 (1, height, width, in_depth)
+        # The input is (height, width, in_depth); by adding a batch dimension, it becomes (1, height, width, in_depth).
         input_nchw = input_hwio.unsqueeze(0).permute(
             0, 3, 1, 2
-        )  # 转换为 (1, in_depth, height, width)
+        )  # Convert to (1, in_depth, height, width)
 
-        # 卷积核是 (fd, fd, in_depth)，需要转换为 (in_depth, 1, fd, fd)
+        # The convolution kernel is (fd, fd, in_depth) and needs to be converted to (in_depth, 1, fd, fd).
         in_depth = weight_fdio.shape[2]
         weight_iodf = weight_fdio.permute(2, 0, 1).unsqueeze(
             1
-        )  # 转换为 (in_depth, 1, fd, fd)
+        )  # Convert to (in_depth, 1, fd, fd)
 
-        # 使用深度可分离卷积
+        # Use depthwise separable convolution.
         output_nchw = F.conv2d(input_nchw, weight_iodf, groups=in_depth)
 
-        # 转换输出格式从 (1, in_depth, new_height, new_width) 到 (new_height,
+        # Convert the output format from (1, in_depth, new_height, new_width) to (new_height,
         # new_width, in_depth)
         output_nchw.squeeze(0).permute(1, 2, 0)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_depthwise_conv2d, number=100)
     return execution_time * 10
 
 
 def perf_layernorm(name, shape):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 创建输入张量
+    # Create the input tensor.
     input_tensor = torch.randn(shape, device=device)
-    # 定义 LayerNorm 层
+    # Define the LayerNorm layer.
     layer_norm = torch.nn.LayerNorm(shape[-1]).to(device)
 
     def test_layernorm():
         layer_norm(input_tensor)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_layernorm, number=100)
     return execution_time * 10
 
 
 def perf_rmsnorm(name, shape):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # 创建输入张量
+    # Create the input tensor.
     input_tensor = torch.randn(shape, device=device)
-    # 定义 RMSNorm 层
+    # Define the RMSNorm layer.
     rmsnorm = torch.nn.RMSNorm(shape).to(device)
 
     def test_rmsnorm():
         rmsnorm(input_tensor)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_rmsnorm, number=100)
     return execution_time * 10
 
@@ -363,7 +363,7 @@ def perf_deformable(name, shape):
         )
         # necessary because kernel launches are async
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_deformable, number=100)
     return execution_time * 10
 
@@ -379,7 +379,7 @@ def perf_scaled_dot_product_attention(name, shape):
     def test_scaled_dot_product_attention():
         F.scaled_dot_product_attention(query, key, value)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(
         test_scaled_dot_product_attention, number=100
     )
@@ -514,14 +514,14 @@ if __name__ == "__main__":
     table.append(files)
     table.append(times)
 
-    # 转置数据
+    # Transpose data
     transposed_data = list(zip(*table))
 
-    # 添加标题行
+    # Add a title row.
     header = ["file", "time(ms)"]
     transposed_data.insert(0, header)
 
-    # 保存为CSV文件
+    # Save as CSV file.
     with open("benchmark/perf/oneAPI_output.csv", "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerows(transposed_data)

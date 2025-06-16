@@ -17,10 +17,10 @@ from falcon.mcts.invalid_actions import get_invalid_actions
 from falcon.mcts.utils import open_file
 from falcon.util import get_target
 
-# 配置日志
+# Configure the log
 logging.basicConfig(
-    level=logging.INFO,  # 设置日志级别
-    format="%(asctime)s - %(levelname)s - %(message)s",  # 设置日志格式
+    level=logging.INFO,  # Set the log level
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Set the log format.
 )
 
 # TODO(michael): replace with shape calculation
@@ -97,7 +97,7 @@ class FalconGo:
         self.output_dir = os.path.join(
             f"{self.source_platform}_{self.target_platform}"
         )
-        # 确保目录存在
+        # Ensure the directory exists.
         os.makedirs(self.output_dir, exist_ok=True)
 
     def perform_action(self, actions):

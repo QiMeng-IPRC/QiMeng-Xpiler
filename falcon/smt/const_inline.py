@@ -8,21 +8,25 @@ from falcon.util import NodeTransformer, generate_code, parse_code_ast
 class ConstInlineTransformer(NodeTransformer):
     def __init__(self):
         super().__init__()
-        self.constants = {}  # 常量记录
-        self.reassigned = set()  # 记录被重新赋值过的变量
+        self.constants = {}  # Constant Record
+        # Variables that have been reassigned are documented.
+        self.reassigned = set()
 
     def visit_Decl(self, node):
         if node.init and isinstance(node.init, c_ast.Constant):
             if isinstance(node.type, c_ast.TypeDecl):
                 tnames = node.type.type.names
                 if "int" in tnames or "float" in tnames:
-                    # 首次赋值为常量，暂存
+                    # The initial assignment is to a constant, temporarily
+                    # stored.
                     self.constants[node.name] = copy.deepcopy(node.init)
-                    return node  # ⚠️注意不能删除声明，否则变量作用域会丢失
+                    # ⚠️ Caution: Do not remove the declaration, otherwise the variable scope will be lost.
+                    return node
         return self.generic_visit(node)
 
     def visit_Assignment(self, node):
-        # 判断赋值是否是简单常量，是否是首次赋值
+        # Determine whether the assignment is a simple constant and whether it
+        # is the initial assignment.
         if isinstance(node.lvalue, c_ast.ID) and isinstance(
             node.rvalue, c_ast.Constant
         ):
@@ -34,7 +38,8 @@ class ConstInlineTransformer(NodeTransformer):
                 self.constants[varname] = copy.deepcopy(node.rvalue)
                 return node
 
-        # 否则，说明该变量被写入了多次，不应替换
+        # Otherwise, it indicates that the variable has been written multiple
+        # times and should not be replaced.
         if isinstance(node.lvalue, c_ast.ID):
             self.reassigned.add(node.lvalue.name)
 
@@ -95,14 +100,14 @@ class ConstInlineTransformer(NodeTransformer):
 
 def constant_inline(code):
     ast = parse_code_ast(code)
-    # 进行转换
+    # "Proceed with the conversion."
     transformer = ConstInlineTransformer()
     ast = transformer.visit(ast)
     return generate_code(ast)
 
 
 if __name__ == "__main__":
-    # # 示例代码
+    # # Example code
     code = """
     void add_kernel(float *input1, float *input2, float *output)
     {

@@ -4,7 +4,7 @@ import os
 import subprocess
 from ctypes import CDLL
 
-import torch  # 引入 PyTorch
+import torch  # Introducing PyTorch
 
 from benchmark.utils import run_dlboost_compilation as run_compilation
 
@@ -41,26 +41,26 @@ if __name__ == "__main__":
     success, output = run_compilation(so_name, file_name)
     os.remove(file_name)
 
-    # 加载 C 库
+    # Load the C library
     lib = CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name)
 
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
     ]
     function.restype = None
 
-    # 创建输入数组
+    # Create the input array.
     dtype = "float32"
     input_array = torch.randn(shape)
     expected_output = ref_program(input_array)
 
-    # 创建输出数组
+    # Create the output array.
     output_array = torch.zeros(shape)
 
-    # 将输入数组和输出数组转换为 C 指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.numpy().ctypes.data_as(
         ctypes.POINTER(ctypes.c_float)
     )
@@ -68,10 +68,10 @@ if __name__ == "__main__":
         ctypes.POINTER(ctypes.c_float)
     )
 
-    # 调用 C 函数
+    # Calling a C function
     function(input_ptr, output_ptr)
 
-    # 验证结果
+    # Verification results
     torch.allclose(
         output_array,
         expected_output,
@@ -80,5 +80,5 @@ if __name__ == "__main__":
         equal_nan=True,
     )
 
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

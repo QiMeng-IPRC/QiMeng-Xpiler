@@ -3,7 +3,7 @@ from string import Template
 
 
 def infer_grid_dim_from_kernel(kernel_code: str, thread_num: int) -> str:
-    # 推导 blockIdx 和 threadIdx 使用的维度
+    # Derive the dimensions used by blockIdx and threadIdx.
     use_block_x = bool(re.search(r"\bblockIdx\.x\b", kernel_code))
     use_block_y = bool(re.search(r"\bblockIdx\.y\b", kernel_code))
     use_block_z = bool(re.search(r"\bblockIdx\.z\b", kernel_code))
@@ -12,7 +12,7 @@ def infer_grid_dim_from_kernel(kernel_code: str, thread_num: int) -> str:
     use_thread_y = bool(re.search(r"\bthreadIdx\.y\b", kernel_code))
     use_thread_z = bool(re.search(r"\bthreadIdx\.z\b", kernel_code))
 
-    # 设置 numBlocks
+    # Set numBlocks
     numBlocks_x = 256 if use_block_x else 1
     numBlocks_y = 256 if use_block_y else 1
     numBlocks_z = 256 if use_block_z else 1
@@ -20,7 +20,7 @@ def infer_grid_dim_from_kernel(kernel_code: str, thread_num: int) -> str:
         f"dim3 numBlocks({numBlocks_x}, {numBlocks_y}, {numBlocks_z});"
     )
 
-    # 设置 blockSize
+    # Set the blockSize.
     blockSize_x = thread_num if use_thread_x else 1
     blockSize_y = 1024 if use_thread_y else 1
     blockSize_z = 1024 if use_thread_z else 1

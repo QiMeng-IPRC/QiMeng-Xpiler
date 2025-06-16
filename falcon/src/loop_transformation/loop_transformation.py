@@ -6,20 +6,11 @@ import openai
 from falcon.simplification import simplify_code
 from falcon.smt.const_inline import constant_inline
 from falcon.src.loop_transformation.decorate_pragma import (
-    SPLIT_PRAGMA_DEMO,
-    SPLIT_PRAGMA_PROMPT,
-)
+    SPLIT_PRAGMA_DEMO, SPLIT_PRAGMA_PROMPT)
 from falcon.src.loop_transformation.pass_prompt import (
-    LOOP_FUSION_DEMO,
-    LOOP_FUSION_PROMPT,
-    LOOP_REORDER_DEMO,
-    LOOP_REORDER_PROMPT,
-    LOOP_SPLIT_DEMO,
-    LOOP_SPLIT_PROMPT,
-    STMT_SPLIT_PROMPT,
-    TENSOR_CONTRACTION,
-    TENSOR_CONTRACTION_DEMO,
-)
+    LOOP_FUSION_DEMO, LOOP_FUSION_PROMPT, LOOP_REORDER_DEMO,
+    LOOP_REORDER_PROMPT, LOOP_SPLIT_DEMO, LOOP_SPLIT_PROMPT, STMT_SPLIT_PROMPT,
+    TENSOR_CONTRACTION, TENSOR_CONTRACTION_DEMO)
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.stmt_simplification import ast_stmt_simplification
 from falcon.util import make_full_func

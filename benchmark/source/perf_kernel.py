@@ -7,7 +7,7 @@ import torch.nn.functional as F
 torch.set_float32_matmul_precision("medium")
 torch.backends.cudnn.deterministic = True
 device = torch.device("cuda")
-# 创建随机张量，数据类型为float16
+# Create a random tensor with a data type of float16.
 # shapes = [
 # [128, 128, 128],
 # [128, 256, 512],
@@ -61,7 +61,7 @@ for file in files:
     key_averages = p.key_averages()
     time = 0
     for avg in key_averages:
-        if avg.key == "aten::matmul":  # 根据 key 找到你需要的操作
+        if avg.key == "aten::matmul":  # Find the operation you need based on the key.
             time = avg.cuda_time
 
     times.append(time)

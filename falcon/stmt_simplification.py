@@ -30,7 +30,8 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
         i = 0
         while i < len(node.block_items):
             current_node = node.block_items[i]
-            # 检查是否是 for 循环，且下一个节点也是 for 循环
+            # Check if it is a for loop and if the next node is also a for
+            # loop.
             if (
                 isinstance(current_node, c_ast.For)
                 and i + 1 < len(node.block_items)
@@ -38,12 +39,12 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
             ):
                 combined_body = []
 
-                # 提取第一个循环的条件和步进
+                # Extract the condition and step of the first loop.
                 init_stmt = current_node.init
                 cond_stmt = current_node.cond
                 next_stmt = current_node.next
 
-                # 遍历连续的相似的 for 循环
+                # Traverse consecutive similar for loops.
                 while (
                     i < len(node.block_items)
                     and isinstance(node.block_items[i], c_ast.For)
@@ -53,14 +54,14 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
                     if loop_var:
                         self.loop_vars.append(loop_var)
 
-                    # 合并循环体内容
+                    # Merge the contents of the loop bodies.
                     combined_body.extend(node.block_items[i].stmt.block_items)
-                    i += 1  # 继续检查下一个节点
+                    i += 1  # Continue to inspect the next node.
 
-                # 更新循环体中的循环变量
+                # Update the loop variable in the loop body.
                 combined_body = self.rename_loop_variables(combined_body)
 
-                # 创建合并后的 for 循环
+                # Create a merged for loop.
                 combined_for = c_ast.For(
                     init=init_stmt,
                     cond=cond_stmt,
@@ -68,9 +69,10 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
                     stmt=c_ast.Compound(block_items=combined_body),
                 )
 
-                # 将合并的循环添加到新的 block_items
+                # Add the merged loops to the new block_items.
                 new_block_items.append(combined_for)
-            # 检查是否是 if 语句，且下一个节点也是 if 语句
+            # Check if it is an if statement and whether the next node is also
+            # an if statement.
             elif (
                 isinstance(current_node, c_ast.If)
                 and i + 1 < len(node.block_items)
@@ -79,34 +81,34 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
             ):
                 combined_body = []
 
-                # 遍历连续的相似的 if 语句
+                # Traverse consecutive similar if statements.
                 while (
                     i < len(node.block_items)
                     and isinstance(node.block_items[i], c_ast.If)
                     and self.nodes_equal(current_node, node.block_items[i])
                 ):
-                    # 合并 if 语句的主体内容
+                    # Merge the contents of the if statement's body.
                     if node.block_items[i].iftrue:
                         combined_body.extend(
                             node.block_items[i].iftrue.block_items
                         )
-                    i += 1  # 继续检查下一个节点
+                    i += 1  # Continue to check the next node.
 
-                # 创建合并后的 if 语句
+                # Create the merged if statement.
                 combined_if = c_ast.If(
                     cond=current_node.cond,
                     iftrue=c_ast.Compound(block_items=combined_body),
                     iffalse=None,
                 )
 
-                # 将合并的 if 语句添加到新的 block_items
+                # Add the merged if statements to the new block_items.
                 new_block_items.append(combined_if)
             else:
-                # 非 for 循环或 if 语句节点直接添加
+                # Directly add nodes other than for loops or if statements.
                 new_block_items.append(current_node)
                 i += 1
 
-        # 更新 node 的 block_items
+        # Update the node's block_items.
         node.block_items = new_block_items
         return self.generic_visit(node)
 
@@ -119,8 +121,8 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
             and loop1.cond.__class__ == loop2.cond.__class__
             and loop1.next.__class__ == loop2.next.__class__
             and loop1.cond.right.value
-            == loop2.cond.right.value  # 确保范围一致
-            and loop1.cond.op == loop2.cond.op  # 确保操作符一致
+            == loop2.cond.right.value  # Ensure consistent scope.
+            and loop1.cond.op == loop2.cond.op  # Ensure consistent operators.
         )
 
     def get_loop_variable(self, for_loop):
@@ -131,7 +133,7 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
 
     def rename_loop_variables(self, block_items):
         """重命名循环体中的循环变量."""
-        # 使用第一个循环变量的名称进行重命名
+        # Rename using the name of the first loop variable.
         for item in block_items:
             self.generic_visit(item)
         return block_items
@@ -150,85 +152,90 @@ class MergeLoopsAndIfsVisitor(NodeTransformer):
         return output_code == output_code
 
     def visit_If(self, node):
-        # 检查 if 条件是否恒为真
+        # Check if the 'if' condition is always true.
         if self.is_condition_always_true(node.cond):
-            # 如果条件恒为真，将 if 语句替换为其主体内容
+            # If the condition is always true, replace the if statement with
+            # its body content.
             return node.iftrue.block_items
-        # 否则，保留 if 语句
+        # Otherwise, keep the if statement.
         return self.generic_visit(node)
 
     def is_condition_always_true(self, condition):
-        # 只处理简单的 `<` 和 `<=` 情况
+        # Only handles simple `<` and `<=` cases.
         if isinstance(condition, c_ast.BinaryOp) and condition.op in (
             "<",
             "<=",
         ):
             left, right = condition.left, condition.right
-            # 判断右侧是否为一个常量
+            # Determine if the right side is a constant.
             if isinstance(right, c_ast.Constant):
-                # 检查左侧是否包含循环变量及范围，并确定条件恒真
+                # Check if the left side contains loop variables and range, and
+                # determine if the condition is always true.
                 return self.is_left_expression_in_bounds(
                     left, int(right.value)
                 )
         return False
 
     def is_left_expression_in_bounds(self, expr, bound):
-        # 递归检查表达式的最大可能值是否小于给定的界限
+        # Check if the maximum possible value of the expression through
+        # recursion is less than the given limit.
         expr_bound = self.get_expression_bound(expr)
         return expr_bound is not None and expr_bound < bound
 
     def get_expression_bound(self, expr):
-        # 计算表达式的最大可能值，用于判断是否在上界之内
+        # Calculate the maximum possible value of the expression to determine
+        # if it is within the upper limit.
         if isinstance(expr, c_ast.ID):
-            # 获取变量的范围上界
+            # "Get the upper bound of the variable's range."
             return self.get_variable_bound(expr.name)
         elif isinstance(expr, c_ast.Constant):
-            # 如果是常量，返回其值
+            # If it is a constant, return its value.
             return int(expr.value)
         elif isinstance(expr, c_ast.BinaryOp):
             left_bound = self.get_expression_bound(expr.left)
             right_bound = self.get_expression_bound(expr.right)
             if expr.op == "+":
-                # 处理加法操作
+                # Handle the addition operation.
                 if left_bound is not None and right_bound is not None:
                     return left_bound + right_bound
             elif expr.op == "*":
-                # 处理乘法操作
+                # Handle the multiplication operation.
                 if left_bound is not None and right_bound is not None:
                     return left_bound * right_bound
             elif expr.op == "-":
-                # 处理减法操作
+                # Handle the subtraction operation.
                 if left_bound is not None and right_bound is not None:
                     return left_bound - right_bound
             elif expr.op == "/":
-                # 处理除法操作，避免除以零
+                # Handle division operations, avoid division by zero.
                 if (
                     left_bound is not None
                     and right_bound is not None
                     and right_bound != 0
                 ):
-                    return left_bound // right_bound  # 整数除法
+                    return left_bound // right_bound  # Integer division
         return None
 
     def get_variable_bound(self, var_name):
-        # 返回循环变量的上界（假设这些变量的范围是已知的）
+        # Return the upper bound of the loop variable (assuming the range of
+        # these variables is known).
         return self.loop_bounds.get(var_name, None)
 
 
 def ast_stmt_simplification(code):
     code = re.sub(r"//.*?\n|/\*.*?\*/", "", code, flags=re.S)
-    # 解析代码并应用合并
+    # Analyze the code and apply the merge.
     ast = parse_code_ast(code)
-    # 使用 MergeForLoopsVisitor 进行遍历和合并
+    # Traverse and merge using MergeForLoopsVisitor.
     merge_visitor = MergeLoopsAndIfsVisitor()
     ast = merge_visitor.visit(ast)
 
-    # 输出修改后的代码
+    # Output the modified code.
     return generate_code(ast)
 
 
 if __name__ == "__main__":
-    # 示例使用
+    # Example usage
     code = """
     void add(float *lhs, float *rhs, float *add_1515)
     {

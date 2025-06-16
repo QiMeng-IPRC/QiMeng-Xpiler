@@ -7,12 +7,9 @@ import openai
 from falcon.buffer_inline import ast_buffer_inline
 from falcon.simplification import simplify_code
 from falcon.src.pre_processing.preprocessing_prompt import (
-    DETENSORIZATION_PROMPT_BANG,
-    LOOP_RECOVERY_DEMO_BANG,
-    LOOP_RECOVERY_DEMO_CUDA,
-    LOOP_RECOVERY_PROMPT_BANG,
-    LOOP_RECOVERY_PROMPT_CUDA,
-)
+    DETENSORIZATION_PROMPT_BANG, LOOP_RECOVERY_DEMO_BANG,
+    LOOP_RECOVERY_DEMO_CUDA, LOOP_RECOVERY_PROMPT_BANG,
+    LOOP_RECOVERY_PROMPT_CUDA)
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.stmt_simplification import ast_stmt_simplification
 from falcon.util import make_full_func

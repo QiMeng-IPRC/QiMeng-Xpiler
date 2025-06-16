@@ -7,17 +7,17 @@ def create_bang_perf_func(file_name, op_type="ewise"):
         original_function = f.read()
         f.close()
 
-    # 正则表达式提取参数部分
+    # Extracting parameters using regular expressions.
     function_signature_pattern = r"void (\w+)\(([^()]*)\)"
     match = re.search(function_signature_pattern, original_function, re.DOTALL)
     if not match:
         raise ValueError("Could not find function signature.")
 
-    # 获取函数名称和参数列表
+    # "Obtain the function name and parameter list."
     kernel_name = match.group(1)
     param_list_str = match.group(2)
 
-    # 构造参数列表
+    # Constructor parameter list
     params = [param_str.strip() for param_str in param_list_str.split(",")]
     param_list = ", ".join(
         [
@@ -44,7 +44,7 @@ def create_bang_perf_func(file_name, op_type="ewise"):
     else:
         dim = "cnrtDim3_t dim = {1, 1, 1};"
         func_type = "cnrtFunctionType_t ktype = cnrtFuncTypeBlock;"
-    # 构造新的计时函数模板
+    # Construct a new timing function template.
     device_memory_alloc = []
     memcpy = []
     size = None
@@ -205,7 +205,7 @@ def create_bang_perf_func(file_name, op_type="ewise"):
     )
 
     pattern = r'extern\s*"C"\s*'
-    # 使用 re.sub 替换匹配部分为空字符串
+    # Use re.sub to replace the matched part with an empty string.
     cleaned_code = re.sub(pattern, "", original_function)
 
     called_param_list = mlu_param_list.replace("float *", "")
@@ -214,7 +214,7 @@ def create_bang_perf_func(file_name, op_type="ewise"):
     memcpy_alloc_list = "        ".join(alloc for alloc in device_memory_alloc)
     memcpy_list = "        ".join(cpy for cpy in memcpy)
     memory_free_list = "        ".join(cpy for cpy in memory_free)
-    # 动态替换模板
+    # Dynamic template replacement
     new_code = cpp_pef_template.substitute(
         kernel_name=kernel_name,
         param_list=param_list,
@@ -229,7 +229,7 @@ def create_bang_perf_func(file_name, op_type="ewise"):
         size_list=size_list,
     )
 
-    # 保存生成的 C++ 文件
+    # Save the generated C++ files.
     output_file = file_name.replace(".mlu", "_bak.mlu")
     with open(output_file, "w") as f:
         f.write(new_code)

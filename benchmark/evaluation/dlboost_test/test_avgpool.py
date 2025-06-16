@@ -14,7 +14,7 @@ def avgpool_np(input_tensor, kernel_stride):
     avgpool = torch.nn.AvgPool2d(
         kernel_size=kernel_stride[:2], stride=kernel_stride[2:]
     )
-    # 执行平均池化
+    # Perform average pooling.
     output_tensor = avgpool(input_tensor)
     output_tensor = output_tensor.permute(0, 2, 3, 1)
     return output_tensor
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     lib = ctypes.CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name)
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -84,5 +84,5 @@ if __name__ == "__main__":
         atol=1e-03,
         equal_nan=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

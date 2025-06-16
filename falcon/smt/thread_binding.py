@@ -1,11 +1,7 @@
 from pycparser import c_ast
 
-from falcon.util import (
-    NodeTransformer,
-    generate_code,
-    make_full_func,
-    parse_code_ast,
-)
+from falcon.util import (NodeTransformer, generate_code, make_full_func,
+                         parse_code_ast)
 
 builtin_var = {
     "cuda": ["threadIdxx", "blockIdxx"],
@@ -37,7 +33,7 @@ class ThreadBindingTransformer(NodeTransformer):
         )
         extend = int(node.cond.right.value)
 
-        # 如果循环变量是绑定变量，返回循环体
+        # If the loop variable is a bound variable, return the loop body.
         if (
             self.target == "mlu"
             and self.parallel_loops >= 2
@@ -89,41 +85,42 @@ class ThreadBindingTransformer(NodeTransformer):
 
 class LoopVisitor(c_ast.NodeVisitor):
     def __init__(self):
-        self.current_depth = 0  # 当前嵌套深度
-        self.max_depth = 0  # 最大嵌套深度
+        self.current_depth = 0  # Current nesting depth
+        self.max_depth = 0  # Maximum nesting depth
 
     def visit_For(self, node):
-        # 每遇到一个for循环，嵌套深度加1
+        # Each time a for loop is encountered, the nesting depth increases by
+        # 1.
         self.current_depth += 1
-        # 更新最大嵌套深度
+        # Update maximum nesting depth.
         if self.current_depth > self.max_depth:
             self.max_depth = self.current_depth
 
-        # 访问子节点
+        # Access child nodes
         self.generic_visit(node)
 
-        # 退出for循环时，嵌套深度减1
+        # When exiting the for loop, decrease the nesting depth by 1.
         self.current_depth -= 1
 
 
 def ast_thread_binding(code, target="mlu"):
-    # 解析代码
+    # Analytical code
     ast = parse_code_ast(code)
 
-    # 统计循环层数
+    # Count the number of loop layers.
     loop_visitor = LoopVisitor()
     loop_visitor.visit(ast)
-    # 进行线程绑定转换
+    # Perform thread-bound conversion.
     transformer = ThreadBindingTransformer(loop_visitor.max_depth, target)
     ast = transformer.visit(ast)
-    # 输出修改后的代码
+    # Output the modified code.
     binding_code = generate_code(ast)
 
     return make_full_func(binding_code, target)
 
 
 if __name__ == "__main__":
-    # 示例代码
+    # Sample code
     code = """
     void func() {
         for (int i = 0; i < 4; ++i) {

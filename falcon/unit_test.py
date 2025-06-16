@@ -5,10 +5,10 @@ import subprocess
 
 from falcon.util import get_target
 
-# 配置日志
+# Configure the log
 logging.basicConfig(
-    level=logging.INFO,  # 设置日志级别
-    format="%(asctime)s - %(levelname)s - %(message)s",  # 设置日志格式
+    level=logging.INFO,  # Set the log level
+    format="%(asctime)s - %(levelname)s - %(message)s",  # Set the log format.
 )
 
 test_file_map = {
@@ -58,17 +58,17 @@ def unit_test(file_name, code):
     if code is None:
         return False
 
-    # 创建临时目录
+    # Create a temporary directory
     tmp_dir = "tmps"
     os.makedirs(tmp_dir, exist_ok=True)
 
-    # 去掉扩展名
+    # Remove the extension.
     filename_no_ext, _ = os.path.splitext(file_name)
-    # 判断文件类型并设置目标
+    # Determine the file type and set the target.
     target, file_type = get_target(code)
-    # 生成目标文件名
+    # "Generate target file name"
     filename = filename_no_ext + file_type
-    # 提取操作名称，并生成测试文件路径
+    # Extract the operation name and generate the test file path.
     op_name = os.path.basename(filename_no_ext).split("_")[0]
 
     if target == "cpu":
@@ -80,7 +80,7 @@ def unit_test(file_name, code):
         target = "dlboost"
     test_file = test_file_map.get(op_name, "").format(target=target)
 
-    # 运行测试
+    # Run the test.
     success, output = run_test(tmp_file_name, test_file)
     logging.info(output)
     shutil.rmtree(tmp_dir)

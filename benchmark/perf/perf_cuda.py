@@ -12,29 +12,29 @@ from benchmark.utils import sumpool_np
 
 
 def perf_unary(shape, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
         ctypes.c_int,
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array = np.random.uniform(size=shape).astype(dtype)
 
-    # 创建输出数组
+    # Create the output array
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Calling a C function
     elapsed_time = function(input_ptr, output_ptr, np.prod(shape))
     return elapsed_time
 
 
 def perf_layernorm(shape1, shape2, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -44,19 +44,19 @@ def perf_layernorm(shape1, shape2, function, dtype="float32"):
         ctypes.c_int,
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array = np.random.uniform(size=shape1).astype(dtype)
     gamma = np.random.uniform(size=shape2).astype(dtype)
     beta = np.random.uniform(size=shape2).astype(dtype)
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     input_ptr = input_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     gamma_ptr = gamma.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     beta_ptr = beta.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Calling a C function
     elapsed_time = function(
         input_ptr,
         gamma_ptr,
@@ -76,7 +76,7 @@ def perf_binary(name, shape_A, shape_B, shape_C, function, dtype="float32"):
     A_ptr = A.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     B_ptr = B.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
 
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -140,7 +140,7 @@ def perf_deformable(shape, function):
         -2, keepdim=True
     )
 
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_int),
@@ -155,7 +155,7 @@ def perf_deformable(shape, function):
     ]
     function.restype = ctypes.c_float
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros(
         (
             value.shape[0],
@@ -165,7 +165,7 @@ def perf_deformable(shape, function):
         "float32",
     )
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     value_ptr = value.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     shapes_ptr = (
         shapes.int().numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_int))
@@ -177,7 +177,7 @@ def perf_deformable(shape, function):
         ctypes.POINTER(ctypes.c_float)
     )
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function
     elapsed_time = function(
         value_ptr,
         shapes_ptr,
@@ -214,7 +214,7 @@ def perf_pooling(name, shape, kernel, stride, function, dtype="float32"):
     )
     size1 = np.prod(shape)
     size2 = np.prod(output_np.shape)
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -228,7 +228,7 @@ def perf_pooling(name, shape, kernel, stride, function, dtype="float32"):
 
 
 def perf_scaled_dot_product_attention(shape, function, dtype="float32"):
-    # 定义函数参数和返回类型
+    # Define the function parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -237,19 +237,19 @@ def perf_scaled_dot_product_attention(shape, function, dtype="float32"):
         ctypes.c_int,
     ]
     function.restype = ctypes.c_float
-    # 创建输入数组
+    # Create the input array.
     input_array_1 = np.random.uniform(size=shape).astype(dtype)
     input_array_2 = np.random.uniform(size=shape).astype(dtype)
     input_array_3 = np.random.uniform(size=shape).astype(dtype)
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(input_array_1)
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays into C pointer types.
     input_ptr_1 = input_array_1.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_2 = input_array_2.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_3 = input_array_3.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Calling a C function
     elapsed_time = function(
         input_ptr_1, input_ptr_2, input_ptr_3, output_ptr, np.prod(shape)
     )

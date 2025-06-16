@@ -10,7 +10,7 @@ from benchmark.utils import run_cuda_compilation as run_compilation
 
 
 def ref_program(x):
-    # 对最后一个维度进行softmax操作
+    # Apply softmax operation to the last dimension.
     e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
     return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
@@ -29,7 +29,7 @@ def verify_softmax(base_name, file, shape):
     lib = ctypes.CDLL(os.path.join(os.getcwd(), so_name))
     name = base_name.split("_")[0]
     function = getattr(lib, name + "_kernel")
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -50,7 +50,7 @@ def verify_softmax(base_name, file, shape):
         err_msg="",
         verbose=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     subprocess.run(["rm", so_name])
 
 

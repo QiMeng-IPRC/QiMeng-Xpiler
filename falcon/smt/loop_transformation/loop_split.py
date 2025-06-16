@@ -7,12 +7,12 @@ from falcon.util import parse_code_ast
 
 class SplitForLoopVisitor(c_ast.NodeVisitor):
     def __init__(self):
-        self.factor = None  # 用于存储从pragma中提取的拆分因子
+        self.factor = None  # Used to store the split factor extracted from the pragma
         self.axis_name = None
         self.org_extent = None
 
     def visit_Compound(self, node):
-        """查找 #pragma loop_split 并获取拆分因子，应用到后续的 for 循环."""
+        """查找 # "Use pragma loop_split and obtain the split factor to apply to subsequent for loops."
         blocks = node.block_items
         if not blocks:
             return
@@ -20,54 +20,56 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
         new_block_items = []
         skip_next = False
 
-        # 遍历 `block_items`
+        # Iterate through `block_items`.
         for index, subnode in enumerate(blocks):
             if skip_next:
                 skip_next = False
                 continue
 
-            # 检查是否是 `#pragma loop_split(<factor>)`
+            # Check if it is `#pragma loop_split(<factor>)`.
             if (
                 isinstance(subnode, c_ast.Pragma)
                 and "loop_split" in subnode.string
             ):
-                # 提取因子值
+                # Extract factor values
                 pragma_content = subnode.string.strip()
                 self.factor = int(
-                    re.search(r"\((?:factor=)?(\d+)\)", pragma_content).group(
+                    re.search(r"\\((?:factor=)?(\\d+)\\)", pragma_content).group(
                         1
                     )
                 )
 
-                # 检查下一节点是否为 `for` 循环
+                # Check if the next node is a `for` loop.
                 if index + 1 < len(blocks) and isinstance(
                     blocks[index + 1], c_ast.For
                 ):
                     self.axis_name = blocks[index + 1].init.decls[0].name
-                    # 应用循环拆分
+                    # Application of cyclic decomposition
                     split_for_loop = self.split_for_loop(blocks[index + 1])
                     new_block_items.append(split_for_loop)
 
-                    # 跳过下一节点的 `for` 循环
+                    # Skip the `for` loop of the next node.
                     skip_next = True
                 else:
-                    # 不是 `for` 循环的情况，添加原节点
+                    # This is not a case for a `for` loop; add the original
+                    # node.
                     new_block_items.append(subnode)
             else:
-                # 如果不是 `#pragma loop_split` 或者 `for`，直接添加节点
+                # If it is neither `#pragma loop_split` nor `for`, directly add
+                # the node.
                 new_block_items.append(subnode)
 
-        # 更新 `block_items`
+        # Update `block_items`.
         node.block_items = new_block_items
         self.generic_visit(node)
 
     def split_for_loop(self, node):
         """对 for 循环进行拆分."""
-        # 提取原始循环的最大值（循环范围）
+        # Extract the maximum value of the original cycle (cycle range).
         self.org_extent = int(node.cond.right.value)
         outer_extent = self.factor
 
-        # 创建内部循环
+        # Create an internal loop.
         inner_init = c_ast.Decl(
             name=self.axis_name + "_in",
             quals=[],
@@ -92,7 +94,7 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
             node.next.op, c_ast.ID(self.axis_name + "_in")
         )
 
-        # 内层循环的 `for` 结构
+        # The `for` structure of the inner loop
         inner_for = c_ast.For(
             init=inner_init,
             cond=inner_cond,
@@ -100,10 +102,10 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
             stmt=node.stmt,
         )
 
-        # 将内层循环包裹在一个 `Compound` 块中
+        # Wrap the inner loop in a `Compound` block.
         inner_compound = c_ast.Compound(block_items=[inner_for])
 
-        # 外层循环
+        # Outer loop
         outer_init = c_ast.Decl(
             name=self.axis_name + "_out",
             quals=[],
@@ -128,7 +130,7 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
             node.next.op, c_ast.ID(self.axis_name + "_out")
         )
 
-        # 外层循环的 `for` 结构
+        # The `for` structure of the outer loop
         outer_for = c_ast.For(
             init=outer_init,
             cond=outer_cond,
@@ -136,7 +138,7 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
             stmt=inner_compound,
         )
 
-        # 修改内层循环中对 `axis_name` 的引用
+        # Revise the reference to `axis_name` in the inner loop.
         self.generic_visit(inner_for)
         return outer_for
 
@@ -168,8 +170,8 @@ def ast_loop_split(code):
 if __name__ == "__main__":
     code = """
     int factorial(int result) {
-        #pragma loop_split(2)
-        for (int i = 0; i < 10; i++) {
+        # pragma loop_split(2)
+        for (int i=0; i < 10; i + +) {
             result += i;
         }
         return result;
@@ -179,11 +181,12 @@ if __name__ == "__main__":
     print(final_node)
 
     code = """
-    void add_kernel(float* A, float* B, float* T_add) {
-        for (int i = 0; i < 256; i++) {
-            #pragma loop_split(4)
-            for(int j = 0; j < 1024; j++) {
-                T_add[((i * 1024) + j)] = (A[((i * 1024) + j)] + B[((i * 1024) + j)]);
+    void add_kernel(float * A, float * B, float * T_add) {
+        for (int i=0; i < 256; i + +) {
+            # pragma loop_split(4)
+            for (int j=0; j < 1024; j + +) {
+                T_add[((i * 1024) + j)] = (A[((i * 1024) + j)] +
+                       B[((i * 1024) + j)]);
             }
         }
     }
@@ -192,14 +195,14 @@ if __name__ == "__main__":
     print(final_node)
 
     code = """
-    void softmax(float *A, float *T_softmax_norm)
+    void softmax(float * A, float * T_softmax_norm)
     {
-    for (int threadIdxx = 0; threadIdxx < 5; ++threadIdxx)
+    for (int threadIdxx=0; threadIdxx < 5; ++threadIdxx)
     {
         float maxVal = A[threadIdxx * 128];
 
-        #pragma loop_split(factor=4)
-        for (int i = 1; i < 128; ++i)
+        # pragma loop_split(factor=4)
+        for (int i=1; i < 128; ++i)
         {
         if (A[(threadIdxx * 128) + i] > maxVal)
         {
@@ -209,20 +212,21 @@ if __name__ == "__main__":
 
         float denom = 0.0f;
 
-        #pragma loop_split(factor=4)
-        for (int i = 0; i < 128; ++i)
+        # pragma loop_split(factor=4)
+        for (int i=0; i < 128; ++i)
         {
-        T_softmax_norm[(threadIdxx * 128) + i] = expf(A[(threadIdxx * 128) + i] - maxVal);
+        T_softmax_norm[(threadIdxx * 128) +
+                        i] = expf(A[(threadIdxx * 128) + i] - maxVal);
         }
 
-        #pragma loop_split(factor=4)
-        for (int i = 0; i < 128; ++i)
+        # pragma loop_split(factor=4)
+        for (int i=0; i < 128; ++i)
         {
         denom += T_softmax_norm[(threadIdxx * 128) + i];
         }
 
-        #pragma loop_split(factor=4)
-        for (int i = 0; i < 128; ++i)
+        # pragma loop_split(factor=4)
+        for (int i=0; i < 128; ++i)
         {
         T_softmax_norm[(threadIdxx * 128) + i] /= denom;
         }

@@ -145,7 +145,7 @@ def ast_buffer_inline(code):
 
 if __name__ == "__main__":
 
-    # 输入代码
+    # Enter code
     code = """
     void tanh(float *input0, float *active_tanh_210)
     {

@@ -62,9 +62,9 @@ if __name__ == "__main__":
     success, output = run_compilation(so_name, file_name)
     os.remove(file_name)
     lib = CDLL(os.path.join(os.getcwd(), so_name))
-    # 获取函数句柄
+    # Obtain function handle
     function = getattr(lib, name + "_kernel")
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_float),
@@ -76,21 +76,21 @@ if __name__ == "__main__":
         ctypes.c_int,
     ]
     function.restype = None
-    # 创建输入数组
+    # Create the input array.
     expected_output = ref_program(query, key, value)
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros_like(query.numpy())
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     input_ptr_q = query.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_k = key.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     input_ptr_v = value.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
 
-    # 调用CUDA kernel
+    # Invoke the CUDA kernel.
     function(input_ptr_q, input_ptr_k, input_ptr_v, output_ptr, *shape)
-    # 验证结果
+    # Verification results
 
-    # 验证结果
+    # Verification results
     np.testing.assert_allclose(
         output_array,
         expected_output.numpy(),
@@ -101,5 +101,5 @@ if __name__ == "__main__":
         verbose=True,
     )
 
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

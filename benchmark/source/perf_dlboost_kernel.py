@@ -6,7 +6,7 @@ import torch
 
 # torch.set_float32_matmul_precision('medium')
 device = torch.device("cpu")
-# 创建随机张量，数据类型为float32
+# Create a random tensor with a data type of float32.
 
 
 times = []
@@ -35,6 +35,6 @@ for file in files:
     def test_bmm():
         torch.matmul(A, B)
 
-    # 使用 timeit 进行多次测量，设置执行次数为 100
+    # Use timeit to perform multiple measurements, setting the number of executions to 100.
     execution_time = timeit.timeit(test_bmm, number=100)
     print(f"{base_name} execution time: {execution_time * 10} ms")

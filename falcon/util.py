@@ -66,12 +66,12 @@ def add_memory_prefix(code):
     # Function to replace matched float declarations with the appropriate
     # prefix
     def replacer(match):
-        var_name = match.group(1)  # 变量名，如 "lhs_local_Nram"
+        var_name = match.group(1)  # Variable name, such as "lhs_local_Nram"
         suffix = "_" + match.group(1).split("_")[-1]  # "_Nram"
-        # 如果在映射里，就替换
+        # If it exists in the map, replace it.
         if suffix in prefix_map:
             return f"{prefix_map[suffix]} {var_name}"
-        # 否则保留原样
+        # Otherwise, keep it as is.
         return match.group(0)
 
     # Substitute in the code using regex
@@ -126,15 +126,15 @@ def add_parallel_variable_prefix(code):
 
 def remove_target_prefix(code, target=None):
     patterns = [
-        (r'extern "C"\s+', ""),  # 移除 `extern "C"`
-        (r"__mlu_global__\s+", ""),  # 移除 `__mlu_global__`
-        (r"\b__nram__\s+", ""),  # 移除 `__nram__`
-        (r"\b__wram__\s+", ""),  # 移除 `__wram__`
-        (r"__global__\s+", ""),  # 移除 `__global__`
-        (r"__launch_bounds__\(\d+\)\s+", ""),  # 移除 `__launch_bounds__`
-        (r"\b__restrict__\b", ""),  # 移除 `__restrict__`
-        (r"//.*?\n|/\*.*?\*/", "", re.S),  # 移除所有 C/C++ 注释
-        (r"\bthreadIdxx\b", "threadIdxx"),  # 改为下划线风格
+        (r'extern "C"\s+', ""),  # Remove `extern "C"`.
+        (r"__mlu_global__\s+", ""),  # Remove `__mlu_global__`.
+        (r"\b__nram__\s+", ""),  # Remove `__nram__`.
+        (r"\b__wram__\s+", ""),  # Remove `__wram__`.
+        (r"__global__\s+", ""),  # Remove `__global__`.
+        (r"__launch_bounds__\(\d+\)\s+", ""),  # Remove `__launch_bounds__`.
+        (r"\b__restrict__\b", ""),  # Remove `__restrict__`.
+        (r"//.*?\n|/\*.*?\*/", "", re.S),  # Remove all C/C++ comments.
+        (r"\bthreadIdxx\b", "threadIdxx"),  # Change to underscore style.
         (r"\bthreadIdxy\b", "threadIdxy"),
         (r"\bthreadIdxz\b", "threadIdxz"),
         (r"\bblockIdxx\b", "blockIdxx"),
@@ -145,13 +145,14 @@ def remove_target_prefix(code, target=None):
             r"(\1)(\2)",
         ),
         (r"reinterpret_cast<\s*([^>]+?)\s*>\s*\(([^)]+?)\)", r"(\1)(\2)"),
-        # 处理 wmma 命名空间的类型（模板语法 -> C struct 类型）
+        # Handle the types in the wmma namespace (template syntax -> C struct
+        # type).
         (r"wmma::fragment<[^>]+?>", "wmma_fragment"),
-        # 处理 wmma::前缀函数调用（如 wmma::load_matrix_sync）
+        # Handle wmma:: prefix function calls (such as wmma::load_matrix_sync).
         (r"\bwmma::(\w+)", r"wmma_\1"),
     ]
 
-    # 遍历模式列表，应用替换
+    # Traverse the pattern list and apply replacements.
     for pattern, replacement, *flags in patterns:
         code = re.sub(
             pattern, replacement, code, flags=flags[0] if flags else 0
@@ -198,7 +199,7 @@ def remove_target_prefix(code, target=None):
 
 
 def get_target(code, target=None):
-    # 判断文件类型并设置目标
+    # Determine the file type and set the target.
     if (
         "__mlu_global" in code
         or "__bang" in code

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 # torch.set_float32_matmul_precision('medium')
 device = torch.device("mlu")
-# 创建随机张量，数据类型为float16
+# Create a random tensor with a data type of float16.
 
 
 times = []
@@ -51,7 +51,7 @@ for file in files:
     for avg in key_averages:
         if (
             avg.key == "aten::scaled_dot_product_attention"
-        ):  # 根据 key 找到你需要的操作
+        ):  # Find the operation you need based on the key.
             time = avg.mlu_time
     print(f"eval {base_name}, {time}")
     times.append(time)
@@ -97,7 +97,7 @@ for file in files:
     key_averages = p.key_averages()
     time = 0
     for avg in key_averages:
-        if avg.key == "aten::matmul":  # 根据 key 找到你需要的操作
+        if avg.key == "aten::matmul":  # Find the operation you need based on the key.
             time = avg.mlu_time
 
     times.append(time)
@@ -142,7 +142,7 @@ for file in files:
     key_averages = p.key_averages()
     time = 0
     for avg in key_averages:
-        if avg.key == "aten::matmul":  # 根据 key 找到你需要的操作
+        if avg.key == "aten::matmul":  # Find the operation you need based on the key.
             time = avg.mlu_time
 
     times.append(time)

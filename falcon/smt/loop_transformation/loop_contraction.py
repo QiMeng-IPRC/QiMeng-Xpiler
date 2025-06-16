@@ -17,7 +17,8 @@ class LoopNestFusionVisitor(NodeTransformer):
         i = 0
         while i < len(node.block_items):
             stmt = node.block_items[i]
-            # 检测当前是 For 且下一个也是 For
+            # Check if the current is a for loop and the next one is also a for
+            # loop
             if (
                 isinstance(stmt, c_ast.For)
                 and i + 1 < len(node.block_items)
@@ -25,14 +26,15 @@ class LoopNestFusionVisitor(NodeTransformer):
             ):
                 outer1 = stmt
                 outer2 = node.block_items[i + 1]
-                # 比对两个 outer-loop 的 init/cond/next 是否一致
+                # Compare whether the init/cond/next of the two outer-loops are
+                # consistent.
                 if self._same_loop_header(outer1, outer2):
-                    # 融合：把 outer2.body 放到 outer1.body 后面
+                    # Merge: Place outer2.body behind outer1.body.
                     fused = self._fuse_loops(outer1, outer2)
                     new_items.append(self.visit(fused))
                     i += 2
                     continue
-            # 否则正常保留
+            # Otherwise, retain as normal.
             new_items.append(self.visit(stmt))
             i += 1
 
@@ -40,7 +42,7 @@ class LoopNestFusionVisitor(NodeTransformer):
         return node
 
     def _same_loop_header(self, f1: c_ast.For, f2: c_ast.For) -> bool:
-        # 简单地把 init/cond/next 的文本化比较
+        # Simply compare the textual representations of init/cond/next.
         return (
             self._node_to_str(f1.init) == self._node_to_str(f2.init)
             and self._node_to_str(f1.cond) == self._node_to_str(f2.cond)
@@ -48,15 +50,16 @@ class LoopNestFusionVisitor(NodeTransformer):
         )
 
     def _fuse_loops(self, outer1: c_ast.For, outer2: c_ast.For) -> c_ast.For:
-        # 把 outer2.body.block_items 并入 outer1.body
+        # Integrate outer2.body.block_items into outer1.body.
         body1 = outer1.stmt
         body2 = outer2.stmt
-        # 确保两个 body 都是 Compound，否则包一层
+        # Ensure that both bodies are Compounds; otherwise, wrap them in a
+        # layer.
         if not isinstance(body1, c_ast.Compound):
             body1 = c_ast.Compound([body1])
         if not isinstance(body2, c_ast.Compound):
             body2 = c_ast.Compound([body2])
-        # 生成新的 body
+        # Generate a new body.
         fused_body = c_ast.Compound(body1.block_items + body2.block_items)
         outer1.stmt = fused_body
         return outer1
@@ -70,14 +73,14 @@ class LoopNestFusionVisitor(NodeTransformer):
 
 def ast_loop_contraction(c_code):
     """Start to run loop contraction."""
-    # 1. 解析
+    # 1. Analysis
     ast = parse_code_ast(c_code)
 
-    # 2. 转换（融合循环）
+    # 2. Conversion (Fusion Cycle)
     visitor = LoopNestFusionVisitor()
     visitor.visit(ast)
 
-    # 3. 生成 C 代码
+    # 3. Generate C code
     c_generator.CGenerator()
     code = generate_code(ast)
     code = simplify_code(code)

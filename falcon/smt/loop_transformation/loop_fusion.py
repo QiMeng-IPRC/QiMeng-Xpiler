@@ -11,7 +11,7 @@ class LoopNestFusionVisitor(NodeTransformer):
         self.inner_bound = None
 
     def visit_For(self, node):
-        # 检查当前 for 循环是否包含嵌套的 for 循环
+        # Check whether the current for loop contains nested for loops
         if (
             isinstance(node.stmt, c_ast.Compound)
             and len(node.stmt.block_items) == 1
@@ -20,7 +20,7 @@ class LoopNestFusionVisitor(NodeTransformer):
             if isinstance(nested_loop, c_ast.For) and isinstance(
                 node.next, c_ast.UnaryOp
             ):
-                # 合并嵌套的 for 循环
+                # Merge nested for loops
                 fused_loop = self.fuse_loops(node, nested_loop)
                 node.init = fused_loop.init
                 node.cond = fused_loop.cond
@@ -31,7 +31,8 @@ class LoopNestFusionVisitor(NodeTransformer):
                 self.inner_var = nested_loop.init.decls[0].name
                 self.inner_bound = nested_loop.cond.right.value
 
-                # 更新初始化部分，将变量名改为 i_j_fused
+                # Update the initialization part, and change the variable name
+                # to i_j_fused
                 fused_name = f"{node.init.decls[0].name}_{nested_loop.init.decls[0].name}_fused"
                 node.init.decls[0].name = fused_name
                 node.init.decls[0].type.declname = fused_name
@@ -55,7 +56,7 @@ class LoopNestFusionVisitor(NodeTransformer):
                 and isinstance(left.left, c_ast.ID)
                 and left.left.name == self.outer_var
             ):
-                # 替换为融合变量
+                # Replace with a fused variable
                 fused_index = c_ast.ID(
                     name=f"{self.outer_var}_{self.inner_var}_fused"
                 )
@@ -84,7 +85,7 @@ class LoopNestFusionVisitor(NodeTransformer):
         return self.generic_visit(node)
 
     def fuse_loops(self, outer_loop, inner_loop):
-        # 创建新的循环变量和边界，合并两个循环
+        # Create new loop variables and boundaries, and merge the two loops.
         fused_init = outer_loop.init
         fused_cond = c_ast.BinaryOp(
             op="<",
@@ -98,7 +99,7 @@ class LoopNestFusionVisitor(NodeTransformer):
             ),
         )
         fused_next = outer_loop.next
-        # 将嵌套循环的主体语句调整为单层循环
+        # Adjust the body of the nested loop to a single-layer loop.
         fused_stmt = c_ast.Compound(inner_loop.stmt.block_items)
         fused_loop = c_ast.For(
             init=fused_init, cond=fused_cond, next=fused_next, stmt=fused_stmt
@@ -108,9 +109,9 @@ class LoopNestFusionVisitor(NodeTransformer):
 
 def ast_loop_fusion(c_code):
     ast = parse_code_ast(c_code)
-    # 自定义访问者实例
+    # Custom visitor instance
     visitor = LoopNestFusionVisitor()
-    # 访问 AST，合并可以合并的嵌套 for 循环
+    # Visit the AST and merge nested for loops where possible.
     visitor.visit(ast)
     code = generate_code(ast)
     code = simplify_code(code)
@@ -118,7 +119,7 @@ def ast_loop_fusion(c_code):
 
 
 if __name__ == "__main__":
-    # 含有嵌套 for 循环的 C 代码
+    # C code containing nested for loops
     c_code = """
     void multiply_matrices(int* a, int* b, int* result) {
         for (int i = 0; i < 10; i++) {
@@ -128,7 +129,7 @@ if __name__ == "__main__":
         }
     }
     """
-    # 合并循环后的最终代码
+    # Final code after merging loops
     final_code = ast_loop_fusion(c_code)
     print(final_code)
 
@@ -145,7 +146,7 @@ if __name__ == "__main__":
         }
     }
     """
-    # 合并循环后的最终代码
+    # Final code after merging loops
     final_code = ast_loop_fusion(c_code)
     print(final_code)
 
@@ -162,6 +163,6 @@ if __name__ == "__main__":
 
     }
     """
-    # 合并循环后的最终代码
+    # Final code after merging loops
     final_code = ast_loop_fusion(c_code)
     print(final_code)

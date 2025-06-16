@@ -2,13 +2,8 @@ from string import Template
 
 from pycparser import c_ast, c_generator, c_parser
 
-from falcon.util import (
-    NodeTransformer,
-    add_memory_prefix,
-    generate_code,
-    parse_code_ast,
-    remove_target_prefix,
-)
+from falcon.util import (NodeTransformer, add_memory_prefix, generate_code,
+                         parse_code_ast, remove_target_prefix)
 
 BANG_binary_template = Template(
     """void binary_double_buffering(float* OUTPUT， float* INPUT0, float* INPUT1, int BUF_SIZE, int loop_ext) {
@@ -89,7 +84,7 @@ class PragmaVisitor(NodeTransformer):
         self.inst = []
 
     def visit_Compound(self, node):
-        # 获取 `block_items`
+        # Obtain `block_items`
         blocks = node.block_items
         if not blocks:
             return node
@@ -97,14 +92,16 @@ class PragmaVisitor(NodeTransformer):
         new_block_items = []
         skip_next = False
 
-        # 遍历 `block_items`，查找 `Pragma` 和 `for` 组合
+        # Iterate through `block_items`, searching for the combination of
+        # `Pragma` and `for`.
         for index, subnode in enumerate(blocks):
             if skip_next:
-                # 跳过下一个节点（for 循环），因为已经处理过
+                # Skip the next node (for loop) as it has already been
+                # processed.
                 skip_next = False
                 continue
 
-            # 检查是否是 `#pragma software_pipeline`
+            # Check if it is `#pragma software_pipeline`
             if (
                 isinstance(subnode, c_ast.Pragma)
                 and subnode.string == "software_pipeline"
@@ -127,19 +124,19 @@ class PragmaVisitor(NodeTransformer):
                                 args=c_ast.ExprList(new_args),
                             )
 
-                    # 添加替换后的调用
+                    # Add the replacement call.
                     new_block_items.append(new_call)
 
-                    # 设置跳过下一个 `for` 循环
+                    # Set to skip the next `for` loop.
                     skip_next = True
                 else:
-                    # 如果没有找到 `for`，继续添加当前节点
+                    # If `for` is not found, continue adding the current node.
                     new_block_items.append(subnode)
             else:
-                # 如果不是 `#pragma` 或 `for`，直接添加节点
+                # If it's neither `#pragma` nor `for`, directly add the node.
                 new_block_items.append(subnode)
 
-        # 替换 `block_items`
+        # Replace `block_items`
         node.block_items = new_block_items
         return node
 

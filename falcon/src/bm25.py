@@ -77,9 +77,11 @@ class BM25(object):
         def _cal_param(reader_obj):
             f = (
                 []
-            )  # 列表的每一个元素是一个dict，dict存储着一个文档中每个词的出现次数
-            df = {}  # 存储每个词及出现了该词的文档数量
-            idf = {}  # 存储每个词的idf值
+            )  # Each element of the list is a dict, which stores the occurrence count of each word in a document.
+            # Store each word and the number of documents in which the word
+            # appears.
+            df = {}
+            idf = {}  # Store the IDF value for each word.
             # lines = reader_obj.readlines()
             lines = json.load(reader)
             length = len(lines)

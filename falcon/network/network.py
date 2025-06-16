@@ -33,22 +33,22 @@ class CodeAZNet(hk.Module):
         # token_ids: [B, T]
         B, T = token_ids.shape
 
-        # 简单的嵌入层
+        # Simple embedding layer
         embed = hk.Embed(vocab_size=50000, embed_dim=self.d_model)(
             token_ids
         )  # [B, T, D]
-        x = jnp.mean(embed, axis=1)  # 简单池化为 [B, D]
+        x = jnp.mean(embed, axis=1)  # Simply pool to [B, D].
 
-        # 两层 MLP 处理
+        # Dual-layer MLP processing
         x = hk.Linear(self.d_model)(x)
         x = jax.nn.relu(x)
         x = hk.Linear(self.d_model)(x)
         x = jax.nn.relu(x)
 
-        # 策略头
+        # Strategic Leader
         logits = hk.Linear(self.num_actions)(x)  # [B, num_actions]
 
-        # 价值头
+        # Value Leader
         value = hk.Linear(1)(x)
         value = jnp.tanh(value)
         value = value.squeeze(-1)  # [B]

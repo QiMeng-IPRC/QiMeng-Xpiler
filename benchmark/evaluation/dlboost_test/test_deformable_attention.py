@@ -116,7 +116,7 @@ if __name__ == "__main__":
     os.remove(file_name)
     lib = CDLL(os.path.join(os.getcwd(), so_name))
     function = getattr(lib, name)
-    # 定义函数参数和返回类型
+    # Define the function's parameters and return types.
     function.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.POINTER(ctypes.c_int),
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     ]
     function.restype = None
 
-    # 创建输出数组
+    # Create the output array.
     output_array = np.zeros(
         (
             value.shape[0],
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         "float32",
     )
 
-    # 将输入数组和输出数组转换为C指针类型
+    # Convert the input and output arrays to C pointer types.
     value_ptr = value.numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     shapes_ptr = (
         shapes.int().numpy().ctypes.data_as(ctypes.POINTER(ctypes.c_int))
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         ctypes.POINTER(ctypes.c_float)
     )
     output_ptr = output_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    # 调用C函数
+    # Invoke the C function
     function(
         value_ptr,
         shapes_ptr,
@@ -156,7 +156,7 @@ if __name__ == "__main__":
         attention_weights_ptr,
         output_ptr,
     )
-    # 验证结果
+    # Verification results
     np.testing.assert_allclose(
         output_array,
         torch_da.numpy(),
@@ -166,5 +166,5 @@ if __name__ == "__main__":
         err_msg="",
         verbose=True,
     )
-    print("验证通过！")
+    print("Verification successful!")
     result = subprocess.run(["rm", so_name])

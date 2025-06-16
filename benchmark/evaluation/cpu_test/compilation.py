@@ -46,14 +46,14 @@ if __name__ == "__main__":
         os.path.join(os.getcwd(), "benchmark/data/cpp_code_test/*.cpp")
     )
 
-    # 使用 ThreadPoolExecutor 并行执行文件编译
+    # Use ThreadPoolExecutor to execute file compilation in parallel.
     counter = 0
     with ThreadPoolExecutor() as executor:
         results = list(
             tqdm(executor.map(compile_file, files), total=len(files))
         )
 
-    # 统计编译成功的文件数
+    # Count the number of files successfully compiled.
     counter = sum(results)
 
     print(counter)

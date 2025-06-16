@@ -16,7 +16,7 @@ def update_dim(cuda_code):
     that matches the number inside the parentheses."""
     match = re.search(r"__launch_bounds__\((\d+)\)", cuda_code)
     if match:
-        # 打印匹配的数值
+       # Print the matching values
         launch_bounds_value = int(match.group(1))
         ParaVar["threadIdx.x"] = launch_bounds_value
     return ParaVar
