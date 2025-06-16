@@ -12,7 +12,7 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
         self.org_extent = None
 
     def visit_Compound(self, node):
-        """查找 # "Use pragma loop_split and obtain the split factor to apply to subsequent for loops."
+        """Use pragma loop_split and obtain the split factor to apply to subsequent for loops."""
         blocks = node.block_items
         if not blocks:
             return
@@ -64,7 +64,7 @@ class SplitForLoopVisitor(c_ast.NodeVisitor):
         self.generic_visit(node)
 
     def split_for_loop(self, node):
-        """对 for 循环进行拆分."""
+        """Split for loop"""
         # Extract the maximum value of the original cycle (cycle range).
         self.org_extent = int(node.cond.right.value)
         outer_extent = self.factor

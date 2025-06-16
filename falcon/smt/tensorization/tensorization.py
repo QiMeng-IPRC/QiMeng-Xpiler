@@ -13,7 +13,7 @@ class PragmaToSIMDTransformer(NodeTransformer):
         self.vectorize_var = None
 
     def visit_Compound(self, node):
-        """遍历代码块，查找并修改带有 # The comment refers to the "for loop" in pragma.
+        """Find "for loop" in pragma."""
         new_block_items = []
         i = 0
         while i < len(node.block_items):
@@ -127,7 +127,7 @@ class PragmaToSIMDTransformer(NodeTransformer):
         self.loop_exts = []
         # Recursively access the child nodes of for_loop to trigger visit_For.
         self.visit(for_loop)
-        """根据 pragma 生成对应的指令，替换 for 循环."""
+
         if "memory" in pragma_text:
             src_dir = (
                 input_params[0].split("_")[1].upper()

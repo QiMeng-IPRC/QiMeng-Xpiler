@@ -15,7 +15,7 @@ import optax
 import pgx
 import pgx.core as core
 import tiktoken
-from jax import jit, vmap
+from jax import jit
 from jax.experimental import io_callback
 from network import CodeAZNet
 from omegaconf import OmegaConf
@@ -65,7 +65,7 @@ class Config(BaseModel):
     seed: int = 0
     max_num_iters: int = 13
     # network params
-    max_sequence_length: int = 10
+    max_sequence_length: int = 400
     # selfplay params
     selfplay_batch_size: int = 1
     num_simulations: int = 400
@@ -84,7 +84,7 @@ class Config(BaseModel):
 
 conf_dict = OmegaConf.from_cli()
 config: Config = Config(**conf_dict)
-print(config)
+logging.info(config)
 
 
 @dataclass
@@ -96,7 +96,7 @@ class State(core.State):
     terminated: Array = jnp.array(False, dtype=jnp.bool_)
     truncated: Array = jnp.array(False, dtype=jnp.bool_)
     legal_action_mask: Array = jnp.ones(
-        11, dtype=jnp.bool_
+        config.action_num, dtype=jnp.bool_
     )  # Enter your action count here.
     observation: Array = jnp.zeros(
         (150,), dtype=jnp.int32
@@ -107,7 +107,7 @@ class State(core.State):
 
     @property
     def env_id(self) -> core.EnvId:
-        return f"Falcon"  # type: ignore
+        return "Falcon"  # type: ignore
 
 
 class FalconGo:
@@ -174,26 +174,37 @@ class FalconGo:
         # This is a standard Python function; the action ID must be converted
         # using numpy's tolist() method.
         action_list = [ActionSpace[action_ids]]
-        _, reward = self.perform_action(action_list)
-        return reward
+        code, reward = self.perform_action(action_list)
+        # encoding + pad /truncate to fix length
+        encoded = encoder.encode(code)
+        max_len = config.max_sequence_length
+        if len(encoded) < max_len:
+            padded = encoded + [0] * (max_len - len(encoded))  # pad
+        else:
+            padded = encoded[:max_len]  # truncate
+        code_embedding = np.array(padded, dtype=np.int32)  # shape: [max_len]
+        return reward, code_embedding
 
     def step(self, state: State, action_ids: jnp.ndarray) -> State:
+        code_embedding_shape = (config.max_sequence_length,)
         # Use pure_callback for asynchronous calls to pure Python functions to
         # obtain rewards.
-        reward = io_callback(
+        reward, code_embedding = io_callback(
             self.perform_action_py,
-            jax.ShapeDtypeStruct((), jnp.float32),
+            (
+                jax.ShapeDtypeStruct((), jnp.float32),
+                jax.ShapeDtypeStruct(code_embedding_shape, jnp.int32),
+            ),
             action_ids,
         )
         terminated = (reward == -10000.0) | (
             state.iteration >= config.max_num_iters
         )
 
-        new_obs = state.observation
         best_reward = jnp.maximum(state.best_reward, reward)
 
         return State(
-            observation=new_obs,
+            observation=code_embedding,
             terminated=jnp.array(terminated),
             rewards=jnp.array([reward], dtype=jnp.float32),
             legal_action_mask=jnp.ones((config.action_num,), dtype=bool),
@@ -207,10 +218,16 @@ class FalconGo:
         code = open_file(self.file_name)
         if self.source_platform in ["cuda", "hip"]:
             code = code.split("extern")[0]
-        obs = jnp.array(encoder.encode(code), dtype=jnp.int32)
+        encoded = encoder.encode(code)
+        max_len = config.max_sequence_length
+
+        if len(encoded) < max_len:
+            padded = encoded + [0] * (max_len - len(encoded))  # pad
+        else:
+            padded = encoded[:max_len]  # truncate
 
         return State(
-            observation=obs,
+            observation=np.array(padded, dtype=np.int32),
             legal_action_mask=jnp.ones(self.num_actions, dtype=jnp.bool_),
             rewards=jnp.array([0.0], dtype=jnp.float32),
             terminated=jnp.array(False),
@@ -423,10 +440,9 @@ def train(model, opt_state, data: Sample):
 def evaluate(rng_key, model):
     model_params, model_state = model
     batch_size = config.selfplay_batch_size // num_devices
-    keys = jax.random.split(rng_key, batch_size)
 
     # Initialize the environmental state.
-    batch_reset = vmap(env.reset)
+    batch_reset = jax.vmap(env.reset)
     key, subkey = jax.random.split(rng_key)
     subkeys = jax.random.split(subkey, num=1)
     states = batch_reset(subkeys)
