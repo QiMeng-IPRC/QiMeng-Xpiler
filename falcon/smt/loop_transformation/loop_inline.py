@@ -39,7 +39,7 @@ class LoopMerger(NodeTransformer):
     def can_merge(self, loop1, loop2):
         # Checks if two loops have the same structure and can be merged
         return (
-            type(loop1) == type(loop2)
+            isinstance(loop1, loop2)
             and loop1.init.show() == loop2.init.show()
             and loop1.cond.show() == loop2.cond.show()
             and loop1.next.show() == loop2.next.show()

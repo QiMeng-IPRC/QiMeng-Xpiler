@@ -1,7 +1,11 @@
 from pycparser import c_ast
 
-from falcon.util import (NodeTransformer, add_memory_prefix, generate_code,
-                         parse_code_ast)
+from falcon.util import (
+    NodeTransformer,
+    add_memory_prefix,
+    generate_code,
+    parse_code_ast,
+)
 
 
 class LoopVisitor(c_ast.NodeVisitor):

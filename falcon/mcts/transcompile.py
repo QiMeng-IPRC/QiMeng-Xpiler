@@ -101,12 +101,24 @@ class FalconGo:
         os.makedirs(self.output_dir, exist_ok=True)
 
     def perform_action(self, actions):
-        """Generates a design space for a given `action`.
+        """Applies a sequence of scheduling actions to the original code.
 
-        It calls `generate_design_space()`
-        with specific parameters to apply the given scheduling rule (`action`) to the module.
-        The function returns a new `ProgramState` object, which represents the new program
-        state after applying the action.
+        This function:
+        1. Loads the original source code
+        2. Applies each scheduling action in sequence
+        3. Compiles the transformed code
+        4. Evaluates its performance
+
+        The function returns both the transformed code and a performance score.
+        A score of 0 indicates compilation failure.
+
+        Args:
+            actions: List of scheduling actions to apply sequentially
+
+        Returns:
+            tuple: (transformed_code, performance_score)
+            - transformed_code (str): Source code after applying all actions
+            - performance_score (float): Performance metric (0 if compilation fails)
         """
         code = open_file(self.file_name)
         code = (
@@ -265,7 +277,7 @@ def get_recurrent_fn(env):
             get_invalid_actions(code, env.source_platform, env.target_platform)
         ).reshape(1, -1)
         reward = rewards[0, 0, depth - 1, actions]
-        # prior_logits = jax.random.uniform(subkey, shape=(1, A_Length))
+
         prior_logits = jnp.array(
             generate_prior_from_src(
                 code, env.source_platform, env.target_platform
@@ -338,9 +350,7 @@ def main(argv):
     policy_output = _run_demo(falcon_env, rng_key)
     batch_index = 0
     selected_action = policy_output.action[batch_index]
-    q_value = policy_output.search_tree.summary().qvalues[
-        batch_index, selected_action
-    ]
+    policy_output.search_tree.summary().qvalues[batch_index, selected_action]
     # To estimate the value of the root state, use the Q-value of the selected
     # action. The Q-value is not affected by the exploration at the root
     # node.

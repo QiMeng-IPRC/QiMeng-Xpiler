@@ -4,7 +4,7 @@ import os
 import pickle
 import time
 from functools import partial
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 import haiku as hk
 import jax
@@ -15,7 +15,6 @@ import optax
 import pgx
 import pgx.core as core
 import tiktoken
-from jax import jit
 from jax.experimental import io_callback
 from network import CodeAZNet
 from omegaconf import OmegaConf
@@ -122,6 +121,7 @@ class FalconGo:
     ):
         self.file_name = file_name
         self.op_name = op_name
+        self.cur_code = None
         self.source_platform = source_platform
         self.target_platform = target_platform
         self.action_len = action_len
@@ -136,73 +136,114 @@ class FalconGo:
         # Ensure the directory exists.
         os.makedirs(self.output_dir, exist_ok=True)
 
-    def perform_action(self, actions):
-        """Generates a design space for a given `action`.
+    def perform_action(self, code: str, action_id: int) -> Tuple[str, float]:
+        """Applies a single scheduling action to the code.
 
-        It calls `generate_design_space()`
-        with specific parameters to apply the given scheduling rule (`action`) to the module.
-        The function returns a new `ProgramState` object, which represents the new program
-        state after applying the action.
+        This method applies one scheduling action to the current code state,
+        generating a transformed version that implements the specified optimization.
+        It then compiles and evaluates the transformed code to compute a performance score.
+
+        Args:
+            code: Current source code state
+            action_id: ID of the action to apply
+
+        Returns:
+            tuple: (transformed_code, performance_score)
+            - transformed_code (str): Source code after applying the action
+            - performance_score (float): Quantified performance metric (0 if compilation fails)
         """
-        code = open_file(self.file_name)
-        code = (
-            code.split("extern")[0]
-            if self.source_platform in ["cuda", "hip"]
-            else code
-        )
-        for action in actions:
-            code = action(
-                self.file_name,
-                code,
-                self.source_platform,
-                self.target_platform,
-            )
-        target, file_type = get_target(code, self.target_platform)
-        os.makedirs("tmp", exist_ok=True)
-        # Extract base name and replace extension
-        base_name = os.path.basename(self.file_name)
-        name_no_ext, _ = os.path.splitext(base_name)
-        new_file = os.path.join("tmp", name_no_ext + file_type)
-        with open(new_file, "w", encoding="utf-8") as f:
-            f.write(code)
-        score = objective(new_file, target)
-        if target != self.target_platform:
-            score = 0
-        return code, np.float32(score)
+        # Convert action ID to actual action
+        action = ActionSpace[action_id]
 
-    def perform_action_py(self, action_ids: jnp.ndarray) -> float:
-        # This is a standard Python function; the action ID must be converted
-        # using numpy's tolist() method.
-        action_list = [ActionSpace[action_ids]]
-        code, reward = self.perform_action(action_list)
-        # encoding + pad /truncate to fix length
-        encoded = encoder.encode(code)
+        # Apply the scheduling action to the code
+        transformed_code = action(
+            self.file_name,
+            code,
+            self.source_platform,
+            self.target_platform,
+        )
+
+        # Determine target platform and file extension
+        target, file_type = get_target(transformed_code, self.target_platform)
+
+        # Create temporary directory for intermediate files
+        os.makedirs("tmp", exist_ok=True)
+
+        # Generate output filename in tmp directory
+        base_name = os.path.basename(self.file_name)
+        name_no_ext = os.path.splitext(base_name)[0]
+        new_file = os.path.join("tmp", name_no_ext + file_type)
+
+        # Save transformed code
+        with open(new_file, "w", encoding="utf-8") as f:
+            f.write(transformed_code)
+
+        # Evaluate performance of transformed code
+        score = objective(new_file, target)
+
+        # Zero score if compilation failed
+        if target != self.target_platform:
+            score = 0.0
+
+        return transformed_code, np.float32(score)
+
+    def perform_action_py(self, action_id: int) -> Tuple[float, np.array]:
+        """Python callback function for applying an action and generating
+        embedding.
+
+        Args:
+            action_id: ID of the action to apply
+
+        Returns:
+            tuple: (reward, code_embedding)
+        """
+        assert self.cur_code is not None, "cur_code is not initialized."
+        # Apply the action to get new code and reward
+        new_code, reward = self.perform_action(self.cur_code, action_id)
+
+        # Encode the new code and pad/truncate to fixed length
+        encoded = encoder.encode(new_code)
         max_len = config.max_sequence_length
+
         if len(encoded) < max_len:
             padded = encoded + [0] * (max_len - len(encoded))  # pad
         else:
             padded = encoded[:max_len]  # truncate
+
         code_embedding = np.array(padded, dtype=np.int32)  # shape: [max_len]
         return reward, code_embedding
 
-    def step(self, state: State, action_ids: jnp.ndarray) -> State:
+    def step(self, state: State, action_id: jnp.ndarray) -> State:
+        """Applies an action to the current state and returns the new state.
+
+        Args:
+            state: Current program state
+            action_id: ID of the action to apply
+
+        Returns:
+            State: New program state after applying the action
+        """
         code_embedding_shape = (config.max_sequence_length,)
-        # Use pure_callback for asynchronous calls to pure Python functions to
-        # obtain rewards.
+
+        # Use callback to apply action and get new state components
         reward, code_embedding = io_callback(
             self.perform_action_py,
             (
                 jax.ShapeDtypeStruct((), jnp.float32),
                 jax.ShapeDtypeStruct(code_embedding_shape, jnp.int32),
             ),
-            action_ids,
-        )
-        terminated = (reward == -10000.0) | (
-            state.iteration >= config.max_num_iters
+            action_id,
         )
 
+        # Check termination conditions
+        terminated = (reward == -10000.0) | (
+            state.iteration >= config.max_num_iters - 1
+        )
+
+        # Update best reward
         best_reward = jnp.maximum(state.best_reward, reward)
 
+        # Return new state
         return State(
             observation=code_embedding,
             terminated=jnp.array(terminated),
@@ -218,6 +259,7 @@ class FalconGo:
         code = open_file(self.file_name)
         if self.source_platform in ["cuda", "hip"]:
             code = code.split("extern")[0]
+        self.cur_code = code
         encoded = encoder.encode(code)
         max_len = config.max_sequence_length
 
@@ -238,7 +280,7 @@ class FalconGo:
             _step_count=jnp.array(0),
         )
 
-    @partial(jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,))
     def get_observation(self, env_state):
         optimize_grid, trajectory, depth = env_state
         return optimize_grid

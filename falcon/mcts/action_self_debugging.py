@@ -5,13 +5,24 @@ import re
 import openai
 
 from falcon.src.loop_transformation.loop_transformation import (
-    run_loop_contraction, run_loop_fusion, run_loop_reorder,
-    run_split_annotation, run_stmt_split)
+    run_loop_contraction,
+    run_loop_fusion,
+    run_loop_reorder,
+    run_split_annotation,
+    run_stmt_split,
+)
 from falcon.src.post_processing.post_processing import (
-    replace_operation_with_intrinsic, run_cache_process, run_code_decoration,
-    run_double_buffer, run_tensorization, run_thread_binding)
-from falcon.src.pre_processing.preprocessing import (run_detensorization,
-                                                     run_loop_recovery)
+    replace_operation_with_intrinsic,
+    run_cache_process,
+    run_code_decoration,
+    run_double_buffer,
+    run_tensorization,
+    run_thread_binding,
+)
+from falcon.src.pre_processing.preprocessing import (
+    run_detensorization,
+    run_loop_recovery,
+)
 from falcon.unit_test import unit_test
 
 
@@ -115,7 +126,7 @@ def loop_reorder(file_name, code, source_platform, target_platform):
 
 
 def loop_split(file_name, code, source_platform, target_platform):
-    code = run_split_annotation(code)
+    final_code = run_split_annotation(code)
     success, output = unit_test(file_name, final_code)
     if success:
         return final_code

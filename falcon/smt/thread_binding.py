@@ -1,7 +1,11 @@
 from pycparser import c_ast
 
-from falcon.util import (NodeTransformer, generate_code, make_full_func,
-                         parse_code_ast)
+from falcon.util import (
+    NodeTransformer,
+    generate_code,
+    make_full_func,
+    parse_code_ast,
+)
 
 builtin_var = {
     "cuda": ["threadIdxx", "blockIdxx"],

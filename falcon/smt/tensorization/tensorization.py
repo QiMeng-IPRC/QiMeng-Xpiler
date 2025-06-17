@@ -3,8 +3,12 @@ import re
 import numpy as np
 from pycparser import c_ast
 
-from falcon.util import (NodeTransformer, generate_code, make_full_func,
-                         parse_code_ast)
+from falcon.util import (
+    NodeTransformer,
+    generate_code,
+    make_full_func,
+    parse_code_ast,
+)
 
 
 class PragmaToSIMDTransformer(NodeTransformer):
