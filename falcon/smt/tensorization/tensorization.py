@@ -184,6 +184,45 @@ class PragmaToSIMDTransformer(NodeTransformer):
                     ]
                 ),
             )
+        elif "sub" in pragma_text:
+            transformed_code = c_ast.FuncCall(
+                name=c_ast.ID("__bang_sub"),
+                args=c_ast.ExprList(
+                    [
+                        *(args),
+                        c_ast.Constant(
+                            "int",
+                            str(np.prod([int(ext) for ext in self.loop_exts])),
+                        ),
+                    ]
+                ),
+            )
+        elif "mul" in pragma_text:
+            transformed_code = c_ast.FuncCall(
+                name=c_ast.ID("__bang_mul"),
+                args=c_ast.ExprList(
+                    [
+                        *(args),
+                        c_ast.Constant(
+                            "int",
+                            str(np.prod([int(ext) for ext in self.loop_exts])),
+                        ),
+                    ]
+                ),
+            )
+        elif "div" in pragma_text:
+            transformed_code = c_ast.FuncCall(
+                name=c_ast.ID("__bang_div"),
+                args=c_ast.ExprList(
+                    [
+                        *(args),
+                        c_ast.Constant(
+                            "int",
+                            str(np.prod([int(ext) for ext in self.loop_exts])),
+                        ),
+                    ]
+                ),
+            )
         else:
             # If the pragma does not match, return to the original for loop.
             return for_loop
