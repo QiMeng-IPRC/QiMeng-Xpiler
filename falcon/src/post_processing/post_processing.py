@@ -81,46 +81,45 @@ def replace_operation_with_intrinsic(code, op_pragma):
     space_maps = []
     # Iterate over each operation found in the code
     for op in op_list:
-        op_name = op.split("(input")[0]
-        # Build the pragma search pattern to match the specific operation
-        # pragma
+        op_name = op.split("(")[0]
         pragma_pattern = re.escape(f"#pragma operation({op})")
-        # Ensure the operation exists in the op_pragma dictionary
         if op_name not in op_pragma:
             raise KeyError(f"Operation '{op_name}' not found in op_pragma.")
-        # Get input and output operands for the operation
-        input_operands = get_input_operand(op)
-        output_operands = get_output_operand(op)
-        # Get corresponding memory spaces from the op_pragma dictionary
-        input_spaces = get_input_operand(op_pragma[op_name])
-        output_spaces = get_output_operand(op_pragma[op_name])
-        # Ensure the input/output operand lists and spaces have matching
-        # lengths
+
+        # Handle input/output existence for op and op_pragma[op_name]
+        if "input[" in op:
+            input_operands = get_input_operand(op)
+        else:
+            input_operands = []
+        if "output[" in op:
+            output_operands = get_output_operand(op)
+        else:
+            output_operands = []
+
+        pragma_val = op_pragma[op_name]
+        if "input[" in pragma_val:
+            input_spaces = get_input_operand(pragma_val)
+        else:
+            input_spaces = []
+        if "output[" in pragma_val:
+            output_spaces = get_output_operand(pragma_val)
+        else:
+            output_spaces = []
+
         if len(input_operands) != len(input_spaces):
             raise ValueError(
                 f"Input operands and memory spaces length mismatch for operation '{op_name}' "
                 f"({len(input_operands)} operands vs {len(input_spaces)} spaces)."
             )
-
         if len(output_operands) != len(output_spaces):
             raise ValueError(
                 f"Output operands and memory spaces length mismatch for operation '{op_name}' "
                 f"({len(output_operands)} operands vs {len(output_spaces)} spaces)."
             )
-        # Create the space map by zipping operands and spaces
-        input_map = {
-            operand: space
-            for operand, space in zip(input_operands, input_spaces)
-        }
-        output_map = {
-            operand: space
-            for operand, space in zip(output_operands, output_spaces)
-        }
+        input_map = {operand: space for operand, space in zip(input_operands, input_spaces)}
+        output_map = {operand: space for operand, space in zip(output_operands, output_spaces)}
         space_map = {"input": input_map, "output": output_map}
-        # Replace the matching pragma with the corresponding value from
-        # op_pragma
-        code = re.sub(pragma_pattern, op_pragma[op_name], code)
-        # Append the space map for this operation
+        code = re.sub(pragma_pattern, pragma_val, code)
         space_maps.append(space_map)
     return code, space_maps
 
