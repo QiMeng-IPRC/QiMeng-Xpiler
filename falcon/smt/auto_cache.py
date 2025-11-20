@@ -1,3 +1,5 @@
+import logging
+
 from pycparser import c_ast
 
 from falcon.util import (
@@ -107,16 +109,16 @@ class CacheTransformationVisitor(NodeTransformer):
                 # operations are required.
                 start_cache = True
             elif isinstance(item, c_ast.For) and start_cache:
-                reads, writes = self.extract_index_expression(item)
+                reads, writes, inner_for = self.extract_index_expression(item)
                 # Insert cache read (read operation)
-                read_items = self.create_read_operations(item, reads)
+                read_items = self.create_read_operations(inner_for, reads)
                 # Insert the original for loop.
                 new_block_items.extend(read_items)
                 # Modify the variable in the loop body.
                 new_item = self.modify_for_loop_body(item, reads, writes)
                 new_block_items.append(new_item)
                 # Insert cache write-back (write operation)
-                write_items = self.create_write_operations(item, writes)
+                write_items = self.create_write_operations(inner_for, writes)
                 new_block_items.extend(write_items)
                 start_cache = False  # Reset flag
             else:
@@ -144,8 +146,27 @@ class CacheTransformationVisitor(NodeTransformer):
                 )
             )
 
-        stmt = for_node.stmt.block_items[0]
-        assert isinstance(stmt, c_ast.Assignment)
+        # Find the first Assignment and the inner for-loop that contains it
+        def find_assignment_in_for(node):
+            # returns (assignment_stmt, target_for_node) or (None, None)
+            if hasattr(node.stmt, "block_items") and node.stmt.block_items:
+                for it in node.stmt.block_items:
+                    if isinstance(it, c_ast.Assignment):
+                        return it, node
+                    if isinstance(it, c_ast.For):
+                        res = find_assignment_in_for(it)
+                        if res[0] is not None:
+                            return res
+            return None, None
+
+        stmt, target_for = find_assignment_in_for(for_node)
+        if stmt is None:
+            logging.error(
+                "No Assignment found in for loop body when modifying loop body for cache replacement."
+            )
+            raise AssertionError(
+                "Expected an Assignment in for loop body but none found."
+            )
         right = stmt.rvalue
         left_value = ouptuts[0]
         right_value = None
@@ -154,10 +175,12 @@ class CacheTransformationVisitor(NodeTransformer):
                 op=right.op, left=inputs[0], right=inputs[1]
             )
 
-        final_node = c_ast.For(
-            init=for_node.init,
-            cond=for_node.cond,
-            next=for_node.next,
+        # Build a new inner for-loop that performs the assignment using cached
+        # buffers
+        final_inner = c_ast.For(
+            init=target_for.init,
+            cond=target_for.cond,
+            next=target_for.next,
             stmt=c_ast.Compound(
                 block_items=[
                     c_ast.Assignment(
@@ -167,17 +190,71 @@ class CacheTransformationVisitor(NodeTransformer):
             ),
         )
 
-        return final_node
+        # Replace the target_for inside the original for_node with final_inner
+        def replace_target_for(node):
+            if node is target_for:
+                return final_inner
+            if hasattr(node.stmt, "block_items") and node.stmt.block_items:
+                new_items = []
+                for it in node.stmt.block_items:
+                    if isinstance(it, c_ast.For):
+                        new_it = replace_target_for(it)
+                        new_items.append(new_it)
+                    else:
+                        new_items.append(it)
+                node.stmt.block_items = new_items
+            return node
+
+        replaced = replace_target_for(for_node)
+        return replaced
 
     def extract_index_expression(self, for_node):
         src_index = {}
-        stmt = for_node.stmt.block_items[0]
-        assert isinstance(stmt, c_ast.Assignment)
+        # Find the first Assignment and its containing for-loop (inner loop)
+
+        def find_assignment_in_for(node):
+            if hasattr(node.stmt, "block_items") and node.stmt.block_items:
+                for it in node.stmt.block_items:
+                    if isinstance(it, c_ast.Assignment):
+                        return it, node
+                    if isinstance(it, c_ast.For):
+                        res = find_assignment_in_for(it)
+                        if res[0] is not None:
+                            return res
+            return None, None
+
+        stmt, target_for = find_assignment_in_for(for_node)
+        if stmt is None:
+            logging.error(
+                "No Assignment found in for loop body when extracting index expression."
+            )
+            raise AssertionError(
+                "Expected an Assignment in for loop body but none found."
+            )
         right = stmt.rvalue
         if isinstance(right, c_ast.BinaryOp):
-            src_index[right.left.name.name] = right.left
-            src_index[right.right.name.name] = right.right
-        return src_index, stmt.lvalue
+            # left and right may be ID or more complex; try to extract names
+            def get_name(expr):
+                if isinstance(expr, c_ast.ID):
+                    return expr.name
+                if hasattr(expr, "name") and isinstance(expr.name, c_ast.ID):
+                    return expr.name.name
+                return None
+
+            left_name = get_name(right.left)
+            right_name = get_name(right.right)
+            try:
+                if left_name:
+                    src_index[left_name] = right.left
+                if right_name:
+                    src_index[right_name] = right.right
+            except Exception:
+                logging.exception(
+                    "Failed to extract index expressions from BinaryOp"
+                )
+        # return src_index, lvalue, and the inner for-loop containing the
+        # assignment
+        return src_index, stmt.lvalue, target_for
 
     def create_read_operations(self, for_loop, src_index):
         """Insert cache read operations with complex indexing."""
@@ -244,6 +321,8 @@ class CacheTransformationVisitor(NodeTransformer):
 
 
 def ast_auto_cache(code, space_map, target="mlu"):
+    print("[INFO] Start auto cache process...", code)
+    print("[INFO] space_map: ", space_map)
     # Analytical code
     ast = parse_code_ast(code)
     # Perform cache loading and write-back insertion.
@@ -278,4 +357,33 @@ if __name__ == "__main__":
     ]
     output_code = ast_auto_cache(code, space_map)
 
+    print(output_code)
+    code = """extern "C" __mlu_global__ void add_kernel(float *output, float *input1, float *input2)
+        {
+        if (coreId < 4)
+        {
+            #pragma intrinsic(__bang_add(input[Nram, Nram], output[Nram])))
+            for (int j = 0; j < 4; j++)
+            {
+            for (int k = 0; k < 128; k++)
+            {
+                for (int l = 0; l < 128; l++)
+                {
+                output[(((((coreId * 4) * 128) * 128) + ((j * 128) * 128)) + (k * 128)) + l] = input1[(((((coreId * 4) * 128) * 128) + ((j * 128) * 128)) + (k * 128)) + l] + input2[(((((coreId * 4) * 128) * 128) + ((j * 128) * 128)) + (k * 128)) + l];
+                }
+
+            }
+
+            }
+
+        }
+        }
+       """
+    space_map = [
+        {
+            "input": {"input1": "Nram", "input2": "Nram"},
+            "output": {"output": "Nram"},
+        }
+    ]
+    output_code = ast_auto_cache(code, space_map)
     print(output_code)
