@@ -121,10 +121,19 @@ def ast_loop_recovery(code, target="cuda"):
     code = constant_inline(code)
     code = ast_stmt_simplification(code)
     # TODO: change the code
-    code = code.replace("coreId", "core_id")
-    code = code.replace("clusterId", "cluster_id")
-    code = make_full_func(code, target)
-    return code
+    if target == "cuda" or target == "hip":
+        code = code.replace("threadIdx.x", "threadIdxx")
+        code = code.replace("threadIdx.y", "threadIdxy")
+        code = code.replace("threadIdx.z", "threadIdxz")
+        code = code.replace("blockIdx.x", "blockIdxx")
+        code = code.replace("blockIdx.y", "blockIdxy")
+        code = code.replace("blockIdx.z", "blockIdxz")
+        return "__global__ " + code if "__global__ " not in code else code
+    elif target == "mlu":
+        code = code.replace("coreId", "core_id")
+        code = code.replace("clusterId", "cluster_id")
+        code = make_full_func(code, target)
+        return code
 
 
 if __name__ == "__main__":

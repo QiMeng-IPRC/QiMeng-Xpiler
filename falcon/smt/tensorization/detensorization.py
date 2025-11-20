@@ -77,11 +77,19 @@ def ast_detensorization(code, target):
         code = generate_code(ast)
 
     elif target == "cuda":
-        with open(cuda_file_name) as json_file:
-            func_defs = json.load(json_file)
-        visitor = Detensorizer(func_defs)
-        visitor.visit(ast)
-        code = generate_code(ast)
+        # If the code doesn't contain any CUDA tensor-core / WMMA markers,
+        # skip detensorization to avoid unnecessary work.
+        if not any(
+            tok in code
+            for tok in ("wmma", "__wmma", "wmma::", "wmma_fragment", "wmma_")
+        ):
+            return code
+        else:
+            with open(cuda_file_name) as json_file:
+                func_defs = json.load(json_file)
+            visitor = Detensorizer(func_defs)
+            visitor.visit(ast)
+            code = generate_code(ast)
 
     elif target == "hip":
         with open(hip_file_name) as json_file:
@@ -107,149 +115,152 @@ def ast_detensorization(code, target):
 
 
 if __name__ == "__main__":
-    # code = """
-    # void add(float* lhs, float* rhs, float* add_1515) {
-    #     float lhs_local_nram[128];
-    #     __memcpy(((float *)lhs_local_nram + (0)), ((float *)lhs + (((((int)clusterId) * 256) + (((int)coreId) * 64)))), 256, GDRAM2NRAM);
-    #     __memcpy(((float *)lhs_local_nram + (64)), ((float *)rhs + (((((int)clusterId) * 256) + (((int)coreId) * 64)))), 256, GDRAM2NRAM);
-    #     __bang_add(((float *)lhs_local_nram + (0)), ((float *)lhs_local_nram + (0)), ((float *)lhs_local_nram + (64)), 64);
-    #     __memcpy(((float *)add_1515 + (((((int)clusterId) * 256) + (((int)coreId) * 64)))), ((float *)lhs_local_nram + (0)), 256, NRAM2GDRAM);
-    # }
-    # """
-    # code = ast_detensorization(code, "mlu")
-    # print(code)
-    # code = """
-    #     void tanh(float* input0, float* active_tanh_210) {
-    #     float input0_local_nram[640];
-    #     __memcpy(((float *)input0_local_nram + (0)), ((float *)input0 + (((((int)clusterId) * 2560) + (((int)coreId) * 640)))), 2560, GDRAM2NRAM);
-    #     __bang_active_tanh(((float *)input0_local_nram + (0)), ((float *)input0_local_nram + (0)), 640);
-    #     __memcpy(((float *)active_tanh_210 + (((((int)clusterId) * 2560) + (((int)coreId) * 640)))), ((float *)input0_local_nram + (0)), 2560, NRAM2GDRAM);
-    # }
-    # """
-    # code = ast_detensorization(code, "mlu")
-    # print(code)
-    # code = """
-    # void softmax(float *A, float *output)
-    # {
-    #     for (int clusterId = 0; clusterId < 4; ++clusterId)
-    #     {
-    #         for (int coreId = 0; coreId < 4; ++coreId)
-    #         {
-    #             float dest[128];
-    #             float dinominator[128];
-    #             float dinominator_temp[128];
-    #             float src1[128];
-    #             float addition[128];
-    #             for (int i = (clusterId * 4) + coreId; i < 5; i += 16)
-    #             {
-    #                 __memcpy(src1, A + (i * 128), 512, GDRAM2NRAM);
-    #                 __bang_active_exp(src1, src1, 128);
-    #                 __bang_write_zero(dinominator, 128);
-    #                 __bang_sumpool(dinominator, src1, 1, 1, 128, 1, 128, 1, 1);
-    #                 __memset_nram(dinominator_temp, 128, dinominator[0]);
-    #                 __bang_div(dest, src1, dinominator_temp, addition, 128);
-    #                 __memcpy(output + (128 * i), dest, 512, NRAM2GDRAM);
-    #             }
-    #         }
-    #     }
-    # }
-    # """
-    # code = ast_detensorization(code, "mlu")
-    # print(code)
+    code = """
+    void add(float* lhs, float* rhs, float* add_1515) {
+        float lhs_local_nram[128];
+        __memcpy(((float *)lhs_local_nram + (0)), ((float *)lhs + (((((int)clusterId) * 256) + (((int)coreId) * 64)))), 256, GDRAM2NRAM);
+        __memcpy(((float *)lhs_local_nram + (64)), ((float *)rhs + (((((int)clusterId) * 256) + (((int)coreId) * 64)))), 256, GDRAM2NRAM);
+        __bang_add(((float *)lhs_local_nram + (0)), ((float *)lhs_local_nram + (0)), ((float *)lhs_local_nram + (64)), 64);
+        __memcpy(((float *)add_1515 + (((((int)clusterId) * 256) + (((int)coreId) * 64)))), ((float *)lhs_local_nram + (0)), 256, NRAM2GDRAM);
+    }
+    """
+    code = ast_detensorization(code, "mlu")
+    print(code)
+    code = """
+        void tanh(float* input0, float* active_tanh_210) {
+        float input0_local_nram[640];
+        __memcpy(((float *)input0_local_nram + (0)), ((float *)input0 + (((((int)clusterId) * 2560) + (((int)coreId) * 640)))), 2560, GDRAM2NRAM);
+        __bang_active_tanh(((float *)input0_local_nram + (0)), ((float *)input0_local_nram + (0)), 640);
+        __memcpy(((float *)active_tanh_210 + (((((int)clusterId) * 2560) + (((int)coreId) * 640)))), ((float *)input0_local_nram + (0)), 2560, NRAM2GDRAM);
+    }
+    """
+    code = ast_detensorization(code, "mlu")
+    print(code)
+    code = """
+    void softmax(float *A, float *output)
+    {
+        for (int clusterId = 0; clusterId < 4; ++clusterId)
+        {
+            for (int coreId = 0; coreId < 4; ++coreId)
+            {
+                float dest[128];
+                float dinominator[128];
+                float dinominator_temp[128];
+                float src1[128];
+                float addition[128];
+                for (int i = (clusterId * 4) + coreId; i < 5; i += 16)
+                {
+                    __memcpy(src1, A + (i * 128), 512, GDRAM2NRAM);
+                    __bang_active_exp(src1, src1, 128);
+                    __bang_write_zero(dinominator, 128);
+                    __bang_sumpool(dinominator, src1, 1, 1, 128, 1, 128, 1, 1);
+                    __memset_nram(dinominator_temp, 128, dinominator[0]);
+                    __bang_div(dest, src1, dinominator_temp, addition, 128);
+                    __memcpy(output + (128 * i), dest, 512, NRAM2GDRAM);
+                }
+            }
+        }
+    }
+    """
+    code = ast_detensorization(code, "mlu")
+    print(code)
 
-    # bang_code = """
-    # extern "C" __mlu_global__ void gemm(float *A, float *B, float *C) {
-    #     __nram__ float A_nram[8 * 128];
-    #     __wram__ float B_wram[128 * 128];
-    #     __nram__ float C_nram[8 * 128];
-    #     if (clusterId < 4) {
-    #         if (coreId < 4) {
-    #         __memcpy(A_nram, A + (clusterId * 4 + coreId) * 8 * 128, 8 * 128 * 4,
-    #                 GDRAM2NRAM);
-    #         __memcpy(B_wram, B, 128 * 128 * 4, GDRAM2WRAM);
+    bang_code = """
+    extern "C" __mlu_global__ void gemm(float *A, float *B, float *C) {
+        __nram__ float A_nram[8 * 128];
+        __wram__ float B_wram[128 * 128];
+        __nram__ float C_nram[8 * 128];
+        if (clusterId < 4) {
+            if (coreId < 4) {
+            __memcpy(A_nram, A + (clusterId * 4 + coreId) * 8 * 128, 8 * 128 * 4,
+                    GDRAM2NRAM);
+            __memcpy(B_wram, B, 128 * 128 * 4, GDRAM2WRAM);
 
-    #         __bang_matmul(C_nram, A_nram, B_wram, 8, 128, 128);
-    #         __memcpy(C + (clusterId * 4 + coreId) * 8 * 128, C_nram, 8 * 128 * 4,
-    #                 NRAM2GDRAM);
-    #         }
-    #     }
-    # }
-    # """
-    # converted_code = ast_detensorization(bang_code, "mlu")
-    # print(converted_code)
+            __bang_matmul(C_nram, A_nram, B_wram, 8, 128, 128);
+            __memcpy(C + (clusterId * 4 + coreId) * 8 * 128, C_nram, 8 * 128 * 4,
+                    NRAM2GDRAM);
+            }
+        }
+    }
+    """
+    converted_code = ast_detensorization(bang_code, "mlu")
+    print(converted_code)
 
-    # bang_code = """
-    # extern "C" __mlu_global__ void add(float *lhs, float *rhs, float *add_1605) {
-    # __nram__ float lhs_local_nram[512];
-    # if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
-    #     __memcpy(
-    #         ((float *)lhs_local_nram + (0)),
-    #         ((float *)lhs + (((((int)clusterId) * 1024) + (((int)coreId) * 256)))),
-    #         1024, GDRAM2NRAM);
-    # }
-    # if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
-    #     __memcpy(
-    #         ((float *)lhs_local_nram + (256)),
-    #         ((float *)rhs + (((((int)clusterId) * 1024) + (((int)coreId) * 256)))),
-    #         1024, GDRAM2NRAM);
-    # }
-    # if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
-    #     __bang_add(((float *)lhs_local_nram + (0)), ((float *)lhs_local_nram + (0)),
-    #             ((float *)lhs_local_nram + (256)), 256);
-    # }
-    # if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
-    #     __memcpy(((float *)add_1605 +
-    #             (((((int)clusterId) * 1024) + (((int)coreId) * 256)))),
-    #             ((float *)lhs_local_nram + (0)), 1024, NRAM2GDRAM);
-    # }
-    # }
-    # """
-    # converted_code = ast_detensorization(bang_code, "mlu")
-    # print(converted_code)
+    bang_code = """
+    extern "C" __mlu_global__ void add(float *lhs, float *rhs, float *add_1605) {
+    __nram__ float lhs_local_nram[512];
+    if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
+        __memcpy(
+            ((float *)lhs_local_nram + (0)),
+            ((float *)lhs + (((((int)clusterId) * 1024) + (((int)coreId) * 256)))),
+            1024, GDRAM2NRAM);
+    }
+    if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
+        __memcpy(
+            ((float *)lhs_local_nram + (256)),
+            ((float *)rhs + (((((int)clusterId) * 1024) + (((int)coreId) * 256)))),
+            1024, GDRAM2NRAM);
+    }
+    if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
+        __bang_add(((float *)lhs_local_nram + (0)), ((float *)lhs_local_nram + (0)),
+                ((float *)lhs_local_nram + (256)), 256);
+    }
+    if (((((int)clusterId) * 4) + ((int)coreId)) < 9) {
+        __memcpy(((float *)add_1605 +
+                (((((int)clusterId) * 1024) + (((int)coreId) * 256)))),
+                ((float *)lhs_local_nram + (0)), 1024, NRAM2GDRAM);
+    }
+    }
+    """
+    converted_code = ast_detensorization(bang_code, "mlu")
+    print(converted_code)
 
-    # cuda_code = """
-    # __global__ void WMMAF16TensorCore(half *A, half *B, float *C, float *D)
-    # {
-    #     int ix = (blockIdx.x * blockDim.x + threadIdx.x) / WARP_SIZE;
-    #     int iy = (blockIdx.y * blockDim.y + threadIdx.y);
+    cuda_code = """
+    __global__ void WMMAF16TensorCore(half *A, half *B, float *C, float *D)
+    {
+        int ix = (blockIdx.x * blockDim.x + threadIdx.x) / WARP_SIZE;
+        int iy = (blockIdx.y * blockDim.y + threadIdx.y);
 
-    #     wmma::fragment<wmma::matrix_a, M, N, K, half, wmma::row_major> a_frag;
-    #     wmma::fragment<wmma::matrix_b, M, N, K, half, wmma::col_major> b_frag;
-    #     wmma::fragment<wmma::accumulator, M, N, K, float> ab_frag;
-    #     wmma::fragment<wmma::accumulator, M, N, K, float> c_frag;
+        wmma::fragment<wmma::matrix_a, M, N, K, half, wmma::row_major> a_frag;
+        wmma::fragment<wmma::matrix_b, M, N, K, half, wmma::col_major> b_frag;
+        wmma::fragment<wmma::accumulator, M, N, K, float> ab_frag;
+        wmma::fragment<wmma::accumulator, M, N, K, float> c_frag;
 
-    #     wmma::fill_fragment(ab_frag, 0.0f);
-    #     int a_col, a_row, b_col, b_row, c_col, c_row;
-    #     a_row = ix * M;
-    #     b_row = iy * N;
-    #     for (int k=0; k<32; k+=K) {
-    #         a_col = b_col = k;
+        wmma::fill_fragment(ab_frag, 0.0f);
+        int a_col, a_row, b_col, b_row, c_col, c_row;
+        a_row = ix * M;
+        b_row = iy * N;
+        for (int k=0; k<32; k+=K) {
+            a_col = b_col = k;
 
-    #         if (a_row < 32 && a_col < 32 && b_row < 32 && b_col < 32) {
-    #             // Load the inputs
-    #             wmma::load_matrix_sync(a_frag, A + a_col + a_row * 32, 32);
-    #             wmma::load_matrix_sync(b_frag, B + b_col + b_col * 32, 32);
+            if (a_row < 32 && a_col < 32 && b_row < 32 && b_col < 32) {
+                // Load the inputs
+                wmma::load_matrix_sync(a_frag, A + a_col + a_row * 32, 32);
+                wmma::load_matrix_sync(b_frag, B + b_col + b_col * 32, 32);
 
-    #             // Perform the matrix multiplication
-    #             wmma::mma_sync(ab_frag, a_frag, b_frag, ab_frag);
-    #         }
-    #     }
+                // Perform the matrix multiplication
+                wmma::mma_sync(ab_frag, a_frag, b_frag, ab_frag);
+            }
+        }
 
-    #     c_col = b_row;
-    #     c_row = a_row;
-    #     if (c_row < 32 && c_col < 32) {
-    # wmma::load_matrix_sync(c_frag, C + c_col + c_row * 32, 32,
-    # wmma::mem_row_major);
+        c_col = b_row;
+        c_row = a_row;
+        if (c_row < 32 && c_col < 32) {
+    wmma::load_matrix_sync(c_frag, C + c_col + c_row * 32, 32,
+    wmma::mem_row_major);
 
-    #         for (int i = 0; i < c_frag.num_elements; i++) {
-    #             c_frag.x[i] = ab_frag.x[i] + c_frag.x[i];
-    #         }
+            for (int i = 0; i < c_frag.num_elements; i++) {
+                c_frag.x[i] = ab_frag.x[i] + c_frag.x[i];
+            }
 
-    #         // Store the output
-    #         wmma::store_matrix_sync(D + c_col + c_row * 32, c_frag, 32, wmma::mem_row_major);
-    #     }
-    # }
-    # """
+            // Store the output
+            wmma::store_matrix_sync(D + c_col + c_row * 32, c_frag, 32, wmma::mem_row_major);
+        }
+    }
+    """
+    converted_code = ast_detensorization(cuda_code, "cuda")
+    print(converted_code)
+
     cuda_code = """
     typedef float half;
     typedef struct {

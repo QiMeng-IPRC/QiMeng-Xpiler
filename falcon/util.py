@@ -238,12 +238,17 @@ def parse_code_ast(code, target=None):
     filename = "./local_parse_test.c"
     with open(filename, "w") as f:
         f.write(code)
+    # Ensure the fake libc include dir is passed as an absolute path so the
+    # C preprocessor can find headers like simd_cuda.h that declare
+    # `struct dim3` and `threadIdx`/`blockIdx`.
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    fake_include = os.path.join(repo_root, "utils", "fake_libc_include")
     try:
         ast = parse_file(
             filename,
             use_cpp=True,
             cpp_path="cpp",
-            cpp_args=["-Iutils/fake_libc_include"],
+            cpp_args=[f"-I{fake_include}"],
         )
     except Exception as e:
         logging.error(f"parse_file failed: {e}")

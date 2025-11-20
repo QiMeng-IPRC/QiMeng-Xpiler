@@ -29,7 +29,7 @@ if __name__ == "__main__":
     bang_file_name = "benchmark/data/mlu_code_test/sign_45_25.mlu"
     code = falcon_preprocess_pipeline(bang_file_name, target="mlu")
     print(code)
-
-    # cuda_file_name = "benchmark/data/cuda_code_test/add_3_3_256.cu"
-    # code = falcon_preprocess_pipeline(cuda_file_name, target="cuda")
-    # print(code)
+    print("===================================")
+    cuda_file_name = "benchmark/data/cuda_code_test/add_3_3_256.cu"
+    code = falcon_preprocess_pipeline(cuda_file_name, target="cuda")
+    print(code)
