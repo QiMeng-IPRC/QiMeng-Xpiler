@@ -1,5 +1,3 @@
-import re
-
 from falcon.client import invoke_llm
 from falcon.simplification import simplify_code
 from falcon.smt.const_inline import constant_inline
@@ -20,7 +18,7 @@ from falcon.src.loop_transformation.pass_prompt import (
 )
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.stmt_simplification import ast_stmt_simplification
-from falcon.util import make_full_func
+from falcon.util import extract_code, make_full_func
 
 
 def run_loop_fusion(code):
@@ -36,9 +34,8 @@ def run_loop_fusion(code):
     PROMPT = PROMPT.replace("{LOOP_FUSION_DEMO}", LOOP_FUSION_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
+    code_content = extract_code(content)
+    if code_content:
         return simplify_code(code_content)
     return None
 
@@ -56,11 +53,7 @@ def run_loop_reorder(code):
     PROMPT = PROMPT.replace("{LOOP_REORDER_DEMO}", LOOP_REORDER_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
-        return code_content
-    return None
+    return extract_code(content)
 
 
 def run_split_annotation(code):
@@ -74,13 +67,8 @@ def run_split_annotation(code):
     PROMPT = PROMPT.replace("{SPLIT_PRAGMA_PROMPT}", SPLIT_PRAGMA_PROMPT)
     PROMPT = PROMPT.replace("{SPLIT_PRAGMA_DEMO}", SPLIT_PRAGMA_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
-        return code_content
-    return None
+    return extract_code(content)
 
 
 def run_apply_split(code):
@@ -98,9 +86,8 @@ def run_apply_split(code):
     PROMPT = PROMPT.replace("{LOOP_SPLIT_DEMO}", LOOP_SPLIT_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
+    code_content = extract_code(content)
+    if code_content:
         code_content = constant_inline(code_content)
         code_content = ast_stmt_simplification(code_content)
         return code_content
@@ -124,9 +111,8 @@ def run_loop_contraction(code, target=None):
     )
     PROMPT = PROMPT.replace("{code}", code)
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
+    code_content = extract_code(content)
+    if code_content:
         code_content = constant_inline(code_content)
         code_content = ast_stmt_simplification(code_content)
         code_content = make_full_func(code_content, target)
@@ -148,9 +134,8 @@ def run_stmt_split(code):
     PROMPT = PROMPT.replace("{STMT_SPLIT_PROMPT}", STMT_SPLIT_PROMPT)
     PROMPT = PROMPT.replace("{code}", code)
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
+    code_content = extract_code(content)
+    if code_content:
         code_content = constant_inline(code_content)
         code_content = make_full_func(code_content)
         return code_content

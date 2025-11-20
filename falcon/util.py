@@ -249,3 +249,50 @@ def generate_code(ast):
         generator.visit(func) for func in func_defs
     )
     return all_functions_code
+
+
+def extract_code(content: str):
+    """Extract code from LLM output.
+
+    Handles fenced code blocks (```lang\n...```) and unfenced raw function
+    definitions (e.g. starting with `extern "C"` or a typical C function
+    signature). Returns the extracted code string or None if not found.
+    """
+    if not content or not isinstance(content, str):
+        return None
+
+    # 1) fenced code block
+    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
+    if match:
+        return match.group(1).strip()
+
+    # 2) try to find an unfenced function by locating a C-style function
+    # signature and extracting until the matching closing brace.
+    func_sig = re.search(
+        r'(extern\s+"C"\s+)?[A-Za-z_][\w\s\*]+\s+[A-Za-z_]\w*\s*\([^)]*\)\s*{',
+        content,
+    )
+    if func_sig:
+        start = func_sig.start()
+        s = content[start:]
+        brace = 0
+        end_idx = None
+        for i, ch in enumerate(s):
+            if ch == "{":
+                brace += 1
+            elif ch == "}":
+                brace -= 1
+                if brace == 0:
+                    end_idx = i
+                    break
+        if end_idx is not None:
+            return s[: end_idx + 1].strip()
+        # fallback: return everything from signature onward
+        return s.strip()
+
+    # 3) last resort: if it looks like code (contains braces and semicolons),
+    # return it
+    if "{" in content and ";" in content:
+        return content.strip()
+
+    return None

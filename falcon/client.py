@@ -22,20 +22,29 @@ client = AzureOpenAI(
 
 
 def invoke_llm(prompt):
-    response = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful assistant.",
-            },
-            {
-                "role": "user",
-                "content": prompt,
-            },
-        ],
-        max_tokens=4096,
-        temperature=1.0,
-        top_p=1.0,
-        model=deployment,
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant.",
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            max_tokens=4096,
+            temperature=1.0,
+            top_p=1.0,
+            model=deployment,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        # Import traceback here to avoid top-level import if not needed
+        import traceback
+
+        tb = traceback.format_exc()
+        err_msg = f"invoke_llm error: {e}\nTraceback:\n{tb}"
+        # Return the error message so callers can see what went wrong
+        return err_msg
