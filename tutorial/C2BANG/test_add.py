@@ -31,13 +31,10 @@ def run_transcompile_code(file_name, source, target):
     print("[Binding]*******binding code: ", final_code)
     code = run_code_decoration(final_code)
     print("[INFO] decorate code: ", code)
-    op_pragma = {}
-    if target == "mlu":
-        op_pragma = json.load(
-            open(
-                "./falcon/documents/operation_bang_C_instruction_map.json", "r"
-            )
-        )
+
+    op_pragma = json.load(
+        open("./falcon/documents/operation_bang_C_instruction_map.json", "r")
+    )
     code, space_maps = replace_operation_with_intrinsic(code, op_pragma)
     cache_code = run_cache_process(code, space_maps, target)
     print("[INFO] cache code: ", cache_code)
