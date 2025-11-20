@@ -3,8 +3,6 @@ import os
 import re
 import sys
 
-import openai
-
 from benchmark.zero_shot.zero_shot_prompt import (
     CPU_TO_CUDA_PROMPT,
     CPU_TO_HIP_PROMPT,
@@ -19,6 +17,7 @@ from benchmark.zero_shot.zero_shot_prompt import (
     MLU_TO_CUDA_PROMPT,
     MLU_TO_HIP_PROMPT,
 )
+from falcon.client import invoke_llm
 
 ext_map = {
     "cuda": "cu",

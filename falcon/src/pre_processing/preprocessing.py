@@ -13,7 +13,7 @@ from falcon.src.pre_processing.preprocessing_prompt import (
 )
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.stmt_simplification import ast_stmt_simplification
-from falcon.util import make_full_func
+from falcon.util import extract_code, make_full_func
 
 
 def run_loop_recovery(code, target):
@@ -48,9 +48,8 @@ def run_loop_recovery(code, target):
     PROMPT = PROMPT.replace("{LOOP_RECOVERY_DEMO}", prompt_demo)
     PROMPT = PROMPT.replace("{code}", code)
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
+    code_content = extract_code(content)
+    if code_content:
         code_content = code_content.replace("coreId", "core_id")
         code_content = code_content.replace("clusterId", "cluster_id")
         code_content = make_full_func(code_content, target)
@@ -83,11 +82,8 @@ def detensorization(op, code, document):
     PROMPT = PROMPT.replace("{op}", op)
 
     content = invoke_llm(PROMPT)
-    match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
-    if match:
-        code_content = match.group(1).strip()
-        return code_content
-    return None
+    code_content = extract_code(content)
+    return code_content
 
 
 def extract_bang_instructions(code):
