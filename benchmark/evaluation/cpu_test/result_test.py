@@ -36,8 +36,8 @@ TEST_FILE_MAP = {
 
 
 def process_file(file_path, test_dir):
-    """
-    Run the corresponding DLBoost test for a single .cpp file.
+    """Run the corresponding DLBoost test for a single .cpp file.
+
     Returns (base_name, success, output).
     """
     base_name = os.path.basename(file_path)

@@ -56,18 +56,7 @@ PROMPT_MAP = {
 def code_transform(input_code: str, prompt_template: str) -> str:
     """Call the GPT-4 API to perform code translation."""
     prompt = prompt_template.format(input_code=input_code)
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a code generation assistant.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.0,
-    )
-    output = response.choices[0].message.content
+    output = invoke_llm(prompt)
     match = re.search(r"```cpp(.*?)```", output, re.DOTALL)
     if not match:
         print("No C++ code block found.")

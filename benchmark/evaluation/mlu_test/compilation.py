@@ -10,8 +10,8 @@ from benchmark.utils import run_mlu_compilation as run_compilation
 
 
 def compile_mlu_file(file_path):
-    """
-    Compile a single .mlu file into a .so and clean up.
+    """Compile a single .mlu file into a .so and clean up.
+
     Returns True if compilation succeeded, False otherwise.
     """
     # Derive names and paths

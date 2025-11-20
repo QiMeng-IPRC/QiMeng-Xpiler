@@ -1,6 +1,5 @@
+import os
 import re
-
-import openai
 
 from falcon.src.post_processing.post_processing_prompt import (
     THREAD_BINDING_DEMO_BANG,
@@ -10,7 +9,6 @@ from falcon.src.post_processing.post_processing_prompt import (
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 
 model_name = """gpt-4-turbo"""
-import os
 api_key = os.getenv("OPENAI_API_KEY")
 
 
@@ -36,12 +34,7 @@ def run_thread_binding(code, target):
     PROMPT = PROMPT.replace("{THREAD_BINDING_PROMPT}", THREAD_BINDING_PROMPT)
     PROMPT = PROMPT.replace("{THREAD_BINDING_DEMO}", prompt_demo)
     PROMPT = PROMPT.replace("{cpp_code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

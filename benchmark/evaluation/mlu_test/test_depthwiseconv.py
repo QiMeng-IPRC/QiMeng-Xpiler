@@ -5,8 +5,9 @@ import subprocess
 
 import numpy as np
 
-from benchmark.utils import run_mlu_compilation as run_compilation
 from benchmark.template.mlu_host_template import create_mlu_func
+from benchmark.utils import run_mlu_compilation as run_compilation
+
 
 def depthwise_conv2d(input, w):
     """Two-dimensional depthwise convolution.

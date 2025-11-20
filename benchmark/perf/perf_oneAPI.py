@@ -74,7 +74,8 @@ def perf_elementwise(name, shape):
 
     op_name = name.split("_")[0]
     if op_name == "add":
-        # Use timeit to perform multiple measurements, setting the number of executions to 100.
+        # Use timeit to perform multiple measurements, setting the number of
+        # executions to 100.
         execution_time = timeit.timeit(test_add, number=100)
         print(f"{name} execution time: {execution_time * 10} ms")
 
@@ -137,7 +138,8 @@ def perf_pooling(name, shape, kernel, stride):
                     stride=self.stride,
                     padding=self.padding,
                 )
-                # Multiply by the size of the pooling window to achieve the effect of sum pooling.
+                # Multiply by the size of the pooling window to achieve the
+                # effect of sum pooling.
                 return x_avgpool * (self.kernel_size**2)
 
         # Using a custom SumPool2d
@@ -146,7 +148,8 @@ def perf_pooling(name, shape, kernel, stride):
     def test_pool():
         pool(x)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_pool, number=100)
     print(f"{name} execution time: {execution_time * 10} ms")
     return execution_time * 10
@@ -163,7 +166,8 @@ def perf_bmm(name, shape_A, shape_B):
         torch.matmul(A, B)
         # Ensure CUDA operations are completed.
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_gemm, number=100)
     return execution_time * 10
 
@@ -184,7 +188,8 @@ def perf_activation(name, shape):
     def test_activation():
         activation(x)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_activation, number=100)
     return execution_time * 10
 
@@ -206,7 +211,8 @@ def perf_conv2d_nchw(
     def test_conv2d():
         conv_layer(input_tensor)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_conv2d, number=100)
     return execution_time * 10
 
@@ -224,10 +230,12 @@ def perf_conv2d_nhwc(
         # Convert the input from NHWC to NCHW.
         input_nchw = input_nhwc.permute(0, 3, 1, 2)
 
-        # Convert the kernel from HWIO (H, W, in_channels, out_channels) format to PyTorch's OIHW format.
+        # Convert the kernel from HWIO (H, W, in_channels, out_channels) format
+        # to PyTorch's OIHW format.
         weight_oihw = weight_hwio.permute(0, 3, 1, 2)
 
-        # Perform convolution operations using the transformed convolution kernel and input.
+        # Perform convolution operations using the transformed convolution
+        # kernel and input.
         output_nchw = F.conv2d(
             input_nchw, weight_oihw, stride=stride, padding=padding
         )
@@ -235,7 +243,8 @@ def perf_conv2d_nhwc(
         # Convert the output from NCHW back to NHWC.
         output_nchw.permute(0, 3, 1, 2)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_conv2d, number=100)
     return execution_time * 10
 
@@ -250,7 +259,8 @@ def perf_gemv(name, shape):
         torch.matmul(matrix, vector)
         # Alternatively, use matrix @ vector.
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_gemv, number=100)
     return execution_time * 10
 
@@ -267,7 +277,8 @@ def perf_conv1d(name, shape):
     def test_conv1d():
         conv_layer(input_tensor)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_conv1d, number=100)
     return execution_time * 10
 
@@ -280,12 +291,14 @@ def perf_depthwise_conv2d(name, shape, kernel_size):
     )
 
     def test_depthwise_conv2d():
-        # The input is (height, width, in_depth); by adding a batch dimension, it becomes (1, height, width, in_depth).
+        # The input is (height, width, in_depth); by adding a batch dimension,
+        # it becomes (1, height, width, in_depth).
         input_nchw = input_hwio.unsqueeze(0).permute(
             0, 3, 1, 2
         )  # Convert to (1, in_depth, height, width)
 
-        # The convolution kernel is (fd, fd, in_depth) and needs to be converted to (in_depth, 1, fd, fd).
+        # The convolution kernel is (fd, fd, in_depth) and needs to be
+        # converted to (in_depth, 1, fd, fd).
         in_depth = weight_fdio.shape[2]
         weight_iodf = weight_fdio.permute(2, 0, 1).unsqueeze(
             1
@@ -298,7 +311,8 @@ def perf_depthwise_conv2d(name, shape, kernel_size):
         # new_width, in_depth)
         output_nchw.squeeze(0).permute(1, 2, 0)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_depthwise_conv2d, number=100)
     return execution_time * 10
 
@@ -313,7 +327,8 @@ def perf_layernorm(name, shape):
     def test_layernorm():
         layer_norm(input_tensor)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_layernorm, number=100)
     return execution_time * 10
 
@@ -328,7 +343,8 @@ def perf_rmsnorm(name, shape):
     def test_rmsnorm():
         rmsnorm(input_tensor)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_rmsnorm, number=100)
     return execution_time * 10
 
@@ -363,7 +379,8 @@ def perf_deformable(name, shape):
         )
         # necessary because kernel launches are async
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_deformable, number=100)
     return execution_time * 10
 
@@ -379,7 +396,8 @@ def perf_scaled_dot_product_attention(name, shape):
     def test_scaled_dot_product_attention():
         F.scaled_dot_product_attention(query, key, value)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(
         test_scaled_dot_product_attention, number=100
     )

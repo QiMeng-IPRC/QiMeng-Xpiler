@@ -2,8 +2,6 @@ import json
 import random
 import re
 
-import openai
-
 from falcon.src.loop_transformation.loop_transformation import (
     run_loop_contraction,
     run_loop_fusion,
@@ -38,15 +36,7 @@ def fix_computation_code(source_code, error_code, error_output):
     Please provide only the complete fixed C code based on error code without any additional text or explanations.
     Please make sure that you don't add any other text, just post back the code.
     It is very important that you do that, because otherwise you will interfere with a very important task of mine."""
-    response = openai.ChatCompletion.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system"},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-    )
-    output = response["choices"][0]["message"]["content"]
+    output = invoke_llm(prompt)
     match = re.search(r"```(?:cpp)?\s*(.*?)```", output, re.DOTALL)
     if match:
         code_content = match.group(1).strip()

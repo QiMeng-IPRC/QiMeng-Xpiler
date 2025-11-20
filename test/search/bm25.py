@@ -173,11 +173,7 @@ class BM25(object):
         return score
 
     def cal_similarity(self, query: str):
-        """
-        相似度计算，无排序结果
-        :param query: 待查询结果
-        :return: [(doc, score), ..]
-        """
+        """相似度计算，无排序结果 :param query: 待查询结果 :return: [(doc, score), ..]"""
         words = [
             word
             for word in jieba.lcut(query)
@@ -190,11 +186,7 @@ class BM25(object):
         return score_list
 
     def cal_similarity_rank(self, query: str):
-        """
-        相似度计算，排序
-        :param query: 待查询结果
-        :return: [(doc, score), ..]
-        """
+        """相似度计算，排序 :param query: 待查询结果 :return: [(doc, score), ..]"""
         result = self.cal_similarity(query)
         result.sort(key=lambda x: -x[1])
         return result

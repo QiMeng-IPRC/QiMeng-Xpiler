@@ -1,10 +1,7 @@
 import os
 import re
 
-import openai
-
-model_name = """gpt-4-turbo"""
-api_key = os.getenv("OPENAI_API_KEY")
+from falcon.client import invoke_llm
 
 
 def run_transcompile(code):
@@ -21,12 +18,7 @@ def run_transcompile(code):
     {code}
     """
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

@@ -36,8 +36,8 @@ TEST_SCRIPT_MAP = {
 
 
 def run_test_for_file(file_path, test_dir):
-    """
-    Run the corresponding CUDA test for a single .cu file.
+    """Run the corresponding CUDA test for a single .cu file.
+
     Returns (base_name, success, output).
     """
     base_name = os.path.basename(file_path)

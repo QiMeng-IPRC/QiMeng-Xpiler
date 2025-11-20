@@ -1,6 +1,5 @@
+import os
 import re
-
-import openai
 
 from falcon.src.loop_transformation.pass_prompt import (
     LOOP_SPLIT_DEMO,
@@ -9,7 +8,6 @@ from falcon.src.loop_transformation.pass_prompt import (
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 
 model_name = """gpt-4-turbo"""
-import os
 api_key = os.getenv("OPENAI_API_KEY")
 
 
@@ -25,12 +23,7 @@ def run_apply_split(code):
     PROMPT = PROMPT.replace("{LOOP_SPLIT_PROMPT}", LOOP_SPLIT_PROMPT)
     PROMPT = PROMPT.replace("{LOOP_SPLIT_DEMO}", LOOP_SPLIT_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

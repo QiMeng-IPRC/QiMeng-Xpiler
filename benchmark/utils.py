@@ -91,10 +91,12 @@ def conv2d_nhwc(
     # Convert the input from NHWC to NCHW.
     input_nchw = input_nhwc.permute(0, 3, 1, 2)
 
-    # Convert the kernel from HWIO (H, W, in_channels, out_channels) format to PyTorch's OIHW format.
+    # Convert the kernel from HWIO (H, W, in_channels, out_channels) format to
+    # PyTorch's OIHW format.
     weight_oihw = weight_hwio.permute(0, 3, 1, 2)
 
-    # Perform convolution operations using the transformed convolution kernel and input.
+    # Perform convolution operations using the transformed convolution kernel
+    # and input.
     output_nchw = F.conv2d(
         input_nchw, weight_oihw, stride=stride, padding=padding
     )

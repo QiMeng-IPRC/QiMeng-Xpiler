@@ -1,8 +1,6 @@
-import os
 import re
 
-import openai
-
+from falcon.client import invoke_llm
 from falcon.simplification import simplify_code
 from falcon.smt.const_inline import constant_inline
 from falcon.src.loop_transformation.decorate_pragma import (
@@ -24,9 +22,6 @@ from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.stmt_simplification import ast_stmt_simplification
 from falcon.util import make_full_func
 
-model_name = """gpt-4-turbo"""
-api_key = os.getenv("OPENAI_API_KEY")
-
 
 def run_loop_fusion(code):
     PROMPT = """
@@ -40,12 +35,7 @@ def run_loop_fusion(code):
     PROMPT = PROMPT.replace("{LOOP_FUSION_PROMPT}", LOOP_FUSION_PROMPT)
     PROMPT = PROMPT.replace("{LOOP_FUSION_DEMO}", LOOP_FUSION_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -65,12 +55,7 @@ def run_loop_reorder(code):
     PROMPT = PROMPT.replace("{LOOP_REORDER_PROMPT}", LOOP_REORDER_PROMPT)
     PROMPT = PROMPT.replace("{LOOP_REORDER_DEMO}", LOOP_REORDER_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -90,12 +75,7 @@ def run_split_annotation(code):
     PROMPT = PROMPT.replace("{SPLIT_PRAGMA_DEMO}", SPLIT_PRAGMA_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
 
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -117,12 +97,7 @@ def run_apply_split(code):
     PROMPT = PROMPT.replace("{LOOP_SPLIT_PROMPT}", LOOP_SPLIT_PROMPT)
     PROMPT = PROMPT.replace("{LOOP_SPLIT_DEMO}", LOOP_SPLIT_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -148,12 +123,7 @@ def run_loop_contraction(code, target=None):
         "{TENSOR_CONTRACTION_DEMO}", TENSOR_CONTRACTION_DEMO
     )
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -177,12 +147,7 @@ def run_stmt_split(code):
 
     PROMPT = PROMPT.replace("{STMT_SPLIT_PROMPT}", STMT_SPLIT_PROMPT)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

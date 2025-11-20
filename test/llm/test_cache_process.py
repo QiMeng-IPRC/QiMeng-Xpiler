@@ -1,6 +1,5 @@
+import os
 import re
-
-import openai
 
 from falcon.src.post_processing.post_processing_prompt import (
     CACHE_READ_DEMO,
@@ -11,7 +10,6 @@ from falcon.src.post_processing.post_processing_prompt import (
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 
 model_name = """gpt-4-turbo"""
-import os
 api_key = os.getenv("OPENAI_API_KEY")
 
 
@@ -90,21 +88,13 @@ def run_cache_process(code, space_maps):
     for op, space_map in zip(intrinsic_list, space_maps):
         for key, value in space_map["input"].items():
             cache_read_prompt = generate_cache_read_prompt(key, value, code)
-            transformation_completion = openai.ChatCompletion.create(
-                model=model_name,
-                messages=[{"role": "user", "content": cache_read_prompt}],
-            )
-            content = transformation_completion.choices[0].message["content"]
+            content = invoke_llm(cache_read_prompt)
             match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
             code = match.group(1) if match else code
 
         for key, value in space_map["output"].items():
             cache_write_prompt = generate_cache_write_prompt(key, value, code)
-            transformation_completion = openai.ChatCompletion.create(
-                model=model_name,
-                messages=[{"role": "user", "content": cache_write_prompt}],
-            )
-            content = transformation_completion.choices[0].message["content"]
+            content = invoke_llm(cache_write_prompt)
             match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
             code = match.group(1) if match else code
     return code

@@ -55,7 +55,8 @@ def main():
     )
     args = parser.parse_args()
 
-    # Obtain the directory from the command line arguments, then search for all .cu files.
+    # Obtain the directory from the command line arguments, then search for
+    # all .cu files.
     pattern = os.path.join(args.src_dir, "*.cu")
     files = glob.glob(pattern)
     if not files:

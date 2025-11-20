@@ -35,6 +35,7 @@ for file in files:
     def test_bmm():
         torch.matmul(A, B)
 
-    # Use timeit to perform multiple measurements, setting the number of executions to 100.
+    # Use timeit to perform multiple measurements, setting the number of
+    # executions to 100.
     execution_time = timeit.timeit(test_bmm, number=100)
     print(f"{base_name} execution time: {execution_time * 10} ms")

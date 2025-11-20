@@ -173,7 +173,8 @@ def perf_pooling(name, shape, kernel, stride):
                     stride=self.stride,
                     padding=self.padding,
                 )
-                # Multiply by the size of the pooling window to achieve the sum pooling effect.
+                # Multiply by the size of the pooling window to achieve the sum
+                # pooling effect.
                 return x_avgpool * (self.kernel_size**2)
 
         # Using a custom SumPool2d
@@ -315,10 +316,12 @@ def perf_conv2d_nhwc(
         # Convert the input from NHWC to NCHW.
         input_nchw = input_nhwc.permute(0, 3, 1, 2)
 
-        # Convert the kernel from HWIO (H, W, in_channels, out_channels) format to PyTorch's OIHW format.
+        # Convert the kernel from HWIO (H, W, in_channels, out_channels) format
+        # to PyTorch's OIHW format.
         weight_oihw = weight_hwio.permute(0, 3, 1, 2)
 
-        # Perform convolution operations using the transformed convolution kernel and input.
+        # Perform convolution operations using the transformed convolution
+        # kernel and input.
         output_nchw = F.conv2d(
             input_nchw, weight_oihw, stride=stride, padding=padding
         )
@@ -409,12 +412,14 @@ def perf_depthwise_conv2d(name, shape, kernel_size):
     )
 
     def test_depthwise_conv2d():
-        # The input is (height, width, in_depth); by adding a batch dimension, it becomes (1, height, width, in_depth).
+        # The input is (height, width, in_depth); by adding a batch dimension,
+        # it becomes (1, height, width, in_depth).
         input_nchw = input_hwio.unsqueeze(0).permute(
             0, 3, 1, 2
         )  # Convert to (1, in_depth, height, width).
 
-        # The convolution kernel is (fd, fd, in_depth) and needs to be converted to (in_depth, 1, fd, fd).
+        # The convolution kernel is (fd, fd, in_depth) and needs to be
+        # converted to (in_depth, 1, fd, fd).
         in_depth = weight_fdio.shape[2]
         weight_iodf = weight_fdio.permute(2, 0, 1).unsqueeze(
             1

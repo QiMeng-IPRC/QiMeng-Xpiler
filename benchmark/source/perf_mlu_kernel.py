@@ -97,7 +97,9 @@ for file in files:
     key_averages = p.key_averages()
     time = 0
     for avg in key_averages:
-        if avg.key == "aten::matmul":  # Find the operation you need based on the key.
+        if (
+            avg.key == "aten::matmul"
+        ):  # Find the operation you need based on the key.
             time = avg.mlu_time
 
     times.append(time)
@@ -142,7 +144,9 @@ for file in files:
     key_averages = p.key_averages()
     time = 0
     for avg in key_averages:
-        if avg.key == "aten::matmul":  # Find the operation you need based on the key.
+        if (
+            avg.key == "aten::matmul"
+        ):  # Find the operation you need based on the key.
             time = avg.mlu_time
 
     times.append(time)

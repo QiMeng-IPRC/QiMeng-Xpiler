@@ -1,8 +1,8 @@
 import re
 
-from pycparser import c_ast, c_generator, c_parser
+from pycparser import c_ast, c_generator
 
-from falcon.util import NodeTransformer, remove_target_prefix,parse_code_ast
+from falcon.util import NodeTransformer, parse_code_ast
 
 # TODO(dongshouyang): Add more varaibles
 ParaVar = {"threadIdx.x": 1024, "blockIdx.x": 256, "coreId": 4, "clusterId": 4}
@@ -12,11 +12,11 @@ mlu_paravar = ["coreId", "clusterId"]
 
 
 def update_dim(cuda_code):
-    """The re module in Python is used to write a regular expression
-    that matches the number inside the parentheses."""
+    """The re module in Python is used to write a regular expression that
+    matches the number inside the parentheses."""
     match = re.search(r"__launch_bounds__\((\d+)\)", cuda_code)
     if match:
-       # Print the matching values
+        # Print the matching values
         launch_bounds_value = int(match.group(1))
         ParaVar["threadIdx.x"] = launch_bounds_value
     return ParaVar

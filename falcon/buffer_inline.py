@@ -1,10 +1,6 @@
-import os
 import re
 
-import openai
-
-model_name = """gpt-4-turbo"""
-api_key = os.getenv("OPENAI_API_KEY")
+from falcon.client import invoke_llm
 
 inline_prompt = """
 
@@ -130,12 +126,7 @@ When you receive a piece of C code, please:
 
 def ast_buffer_inline(code):
     inline_prompt_filled = inline_prompt.replace("{input_code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": inline_prompt_filled}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(inline_prompt_filled)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

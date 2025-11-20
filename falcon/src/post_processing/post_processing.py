@@ -1,9 +1,7 @@
 import json
-import os
 import re
 
-import openai
-
+from falcon.client import invoke_llm
 from falcon.src.post_processing.post_processing_prompt import (
     CACHE_READ_DEMO,
     CACHE_READ_PROMPT,
@@ -20,9 +18,6 @@ from falcon.src.post_processing.post_processing_prompt import (
 )
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.util import make_full_func
-
-model_name = """gpt-4-turbo"""
-api_key = os.getenv("OPENAI_API_KEY")
 
 
 def run_thread_binding(code, target):
@@ -49,12 +44,7 @@ def run_thread_binding(code, target):
     PROMPT = PROMPT.replace("{THREAD_BINDING_DEMO}", prompt_demo)
     PROMPT = PROMPT.replace("{cpp_code}", code)
 
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -210,20 +200,12 @@ def run_cache_process(code, space_maps, target):
     for op, space_map in zip(intrinsic_list, space_maps):
         for key, value in space_map["input"].items():
             cache_read_prompt = generate_cache_read_prompt(key, value, code)
-            transformation_completion = openai.ChatCompletion.create(
-                model=model_name,
-                messages=[{"role": "user", "content": cache_read_prompt}],
-            )
-            content = transformation_completion.choices[0].message["content"]
+            content = invoke_llm(cache_read_prompt)
             match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
             code = match.group(1) if match else code
         for key, value in space_map["output"].items():
             cache_write_prompt = generate_cache_write_prompt(key, value, code)
-            transformation_completion = openai.ChatCompletion.create(
-                model=model_name,
-                messages=[{"role": "user", "content": cache_write_prompt}],
-            )
-            content = transformation_completion.choices[0].message["content"]
+            content = invoke_llm(cache_write_prompt)
             match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
             code = match.group(1) if match else code
     return make_full_func(code, target)
@@ -246,12 +228,7 @@ def tensorization(op, code, document):
     PROMPT = PROMPT.replace("{code}", code)
     PROMPT = PROMPT.replace("{op}", op)
 
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()
@@ -350,12 +327,7 @@ def run_tensorization(code, target):
 
 def run_code_decoration(code):
     PROMPT = DECORATION_PROMPT.replace("{cpp_code}", code)
-    decoration_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = decoration_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
 
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
@@ -384,12 +356,7 @@ def double_buffer(code):
     PROMPT = PROMPT.replace("{DOUBLE_BUFFER_PROMPT}", DOUBLE_BUFFER_PROMPT)
     PROMPT = PROMPT.replace("{DOUBLE_BUFFER_DEMO}", DOUBLE_BUFFER_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

@@ -10,8 +10,8 @@ from benchmark.utils import run_hip_compilation as run_compilation
 
 
 def compile_hip_file(file_path):
-    """
-    Compile a single .hip file into a .so and clean up.
+    """Compile a single .hip file into a .so and clean up.
+
     Returns True if compilation succeeded, False otherwise.
     """
     # Derive names and paths

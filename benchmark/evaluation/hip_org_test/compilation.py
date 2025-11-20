@@ -54,7 +54,8 @@ def main():
     )
     args = parser.parse_args()
 
-    # Obtain the directory from the command line arguments, then search for all .hip files.
+    # Obtain the directory from the command line arguments, then search for
+    # all .hip files.
     pattern = os.path.join(args.src_dir, "*.hip")
     files = glob.glob(pattern)
     if not files:

@@ -13,13 +13,14 @@ from benchmark.utils import sumpool_np
 
 
 def create_hip_perf_func(hip_file):
-    """读取HIP文件，插入事件以获取内核执行时间，并写回文件"""
+    """读取HIP文件，插入事件以获取内核执行时间，并写回文件."""
     with open(hip_file, "r") as f:
         content = f.read()
 
     # The regular expression matches lines with kernel calls, such as add<<<numBlocks, blockSize>>>(d_A, d_B, d_C);
     # TODO(michael): solve the case if the kernel change into another line
-    kernel_call_pattern = r"(\w+<<<.*?>>>\(.*?\);)"  # Match lines containing <<<...>>>
+    # Match lines containing <<<...>>>
+    kernel_call_pattern = r"(\w+<<<.*?>>>\(.*?\);)"
 
     # Find all matching rows.
     matches = re.findall(kernel_call_pattern, content)
@@ -59,7 +60,8 @@ hipEventDestroy(stop);
         modified_kernel = macro + content.replace(match, event_code)
 
         # Insert "return milliseconds;" at the end of the main function.
-        main_pattern = r'extern "C" float \w+\s*\(.*?\)\s*\{'  # Allow function parameters
+        # Allow function parameters
+        main_pattern = r'extern "C" float \w+\s*\(.*?\)\s*\{'
         main_match = re.search(
             main_pattern, modified_kernel, re.DOTALL
         )  # Use re.DOTALL

@@ -1,6 +1,5 @@
+import os
 import re
-
-import openai
 
 from falcon.src.post_processing.post_processing_prompt import (
     DOUBLE_BUFFER_DEMO,
@@ -9,7 +8,6 @@ from falcon.src.post_processing.post_processing_prompt import (
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 
 model_name = """gpt-4-turbo"""
-import os
 api_key = os.getenv("OPENAI_API_KEY")
 
 
@@ -33,12 +31,7 @@ def double_buffer(code):
     PROMPT = PROMPT.replace("{DOUBLE_BUFFER_PROMPT}", DOUBLE_BUFFER_PROMPT)
     PROMPT = PROMPT.replace("{DOUBLE_BUFFER_DEMO}", DOUBLE_BUFFER_DEMO)
     PROMPT = PROMPT.replace("{code}", code)
-    transformation_completion = openai.ChatCompletion.create(
-        model=model_name,
-        messages=[{"role": "user", "content": PROMPT}],
-    )
-
-    content = transformation_completion.choices[0].message["content"]
+    content = invoke_llm(PROMPT)
     match = re.search(r"```[a-zA-Z]*\n(.*?)```", content, re.S)
     if match:
         code_content = match.group(1).strip()

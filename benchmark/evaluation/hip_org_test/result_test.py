@@ -36,8 +36,8 @@ TEST_SCRIPT_MAP = {
 
 
 def run_test_for_file(file_path, test_dir):
-    """
-    Run the corresponding HIP test for a single .hip file.
+    """Run the corresponding HIP test for a single .hip file.
+
     Returns (base_name, success, output).
     """
     base_name = os.path.basename(file_path)

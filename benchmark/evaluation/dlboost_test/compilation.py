@@ -10,8 +10,9 @@ from benchmark.utils import run_dlboost_compilation as run_compilation
 
 
 def compile_cpp_file(file_path):
-    """
-    Compile a single .cpp file (with DL Boost macros) into a .so and clean up.
+    """Compile a single .cpp file (with DL Boost macros) into a .so and clean
+    up.
+
     Returns True on success, False on failure.
     """
     dir_name, base_name = os.path.split(file_path)
