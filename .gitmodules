@@ -7,3 +7,6 @@
 [submodule "3rdparty/bitwuzla"]
 	path = 3rdparty/bitwuzla
 	url = https://github.com/bitwuzla/bitwuzla.git
+[submodule "3rdparty/tenspiler"]
+	path = 3rdparty/tenspiler
+	url = https://github.com/ShouyangDong/tenspiler.git
