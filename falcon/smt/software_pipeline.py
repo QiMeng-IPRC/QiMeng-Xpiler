@@ -11,7 +11,7 @@ from falcon.util import (
 )
 
 BANG_binary_template = Template(
-    """void binary_double_buffering(float* OUTPUT， float* INPUT0, float* INPUT1, int BUF_SIZE, int loop_ext) {
+    """void binary_double_buffering(float* OUTPUT, float* INPUT0, float* INPUT1, int BUF_SIZE, int loop_ext) {
     __nram__ float INPUT0_N[BUF_SIZE * 2];
     __nram__ float INPUT1_N[BUF_SIZE * 2];
     __nram__ float OUTPUT_N[BUF_SIZE * 2];
@@ -46,7 +46,7 @@ BANG_binary_template = Template(
 )
 
 BANG_unary_template = Template(
-    """void unary_double_buffering(float* OUTPUT， float* INPUT0, int BUF_SIZE, int loop_ext) {
+    """void unary_double_buffering(float* OUTPUT, float* INPUT0, int BUF_SIZE, int loop_ext) {
     __nram__ float INPUT0_N[BUF_SIZE * 2];
     __nram__ float OUTPUT_N[BUF_SIZE * 2];
 
@@ -76,11 +76,21 @@ BANG_unary_template = Template(
 
 op_map = {
     "__bang_add": "binary_double_buffering",
+    "__bang_sub": "binary_double_buffering",
+    "__bang_mul": "binary_double_buffering",
+    "__bang_div": "binary_double_buffering",
     "__bang_active_tanh": "unary_double_buffering",
+    "__bang_active_sign": "unary_double_buffering",
+    "__bang_active_exp": "unary_double_buffering",
 }
 op_template = {
     "__bang_add": BANG_binary_template,
+    "__bang_sub": BANG_binary_template,
+    "__bang_mul": BANG_binary_template,
+    "__bang_div": BANG_binary_template,
     "__bang_active_tanh": BANG_unary_template,
+    "__bang_active_sign": BANG_unary_template,
+    "__bang_active_exp": BANG_unary_template,
 }
 
 

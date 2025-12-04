@@ -51619,7 +51619,7 @@ The function requires auxiliary `\_\_nram\_\_` space internally. See the table A
 * `<elem\_count> \* sizeof(type)` must be 128-byte aligned on `(m)tp\_2xx`;
 * The address of `<src>` and `<dst>` must be 64-byte aligned on `(m)tp\_2xx`;
 * When the data type of the elements of `<src>` is `half`, the relative error refer to the table Relative Error of \_\_bang\_active\_exp(half) for accuracy information;
-* When the data type of the elements of `<src>` is `float`, the element value is in the range [-3.4e38, 11]， the average relative error is within 0.01;
+* When the data type of the elements of `<src>` is `float`, the element value is in the range [-3.4e38, 11], the average relative error is within 0.01;
 
 
 
