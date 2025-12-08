@@ -54,16 +54,16 @@ class BM25Param(object):
 
 class BM25(object):
     _param_pkl = "falcon/src/bm25_param.pkl"
-    _docs_path = "falcon/src/bang_api.json"
     _stop_words_path = "falcon/src/stop_words.txt"
     _stop_words = []
 
     # 新增：用于存储需要优先分词的专有名词
     _custom_words_to_add = []
 
-    def __init__(self, docs="", custom_words=[]):
+    def __init__(self, docs="", custom_words=[], doc_path=None):
         self.docs = docs
         self._custom_words_to_add = custom_words  # 接收专有名词列表
+        self._docs_path = doc_path
         self._add_custom_words_to_jieba()  # 优先将专有名词加入词典
         self.param: BM25Param = self._load_param()
 

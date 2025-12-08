@@ -4,6 +4,7 @@ import re
 from falcon.buffer_inline import ast_buffer_inline
 from falcon.client import invoke_llm
 from falcon.simplification import simplify_code
+from falcon.src.intrinsic_retrieval import retrieve_documentation
 from falcon.src.pre_processing.preprocessing_prompt import (
     DETENSORIZATION_PROMPT_BANG,
     LOOP_RECOVERY_DEMO_BANG,
@@ -121,16 +122,18 @@ def extract_cuda_instructions(code):
 
 def run_detensorization(code, target):
     if target == "mlu":
-        op_dict = json.load(
-            open("./falcon/documents/bang_c_user_guide.json", "r")
-        )
         instructions = extract_bang_instructions(code)
         if "__memcpy" in code:
+            op_dict = json.load(
+                open("./falcon/documents/bang_c_user_guide.json", "r")
+            )
             code = detensorization("__memcpy", code, op_dict["__memcpy"])
 
         if instructions is not None:
             for inst in instructions:
-                code = detensorization(inst, code, op_dict[inst])
+                doc = retrieve_documentation(inst, target)
+                code = detensorization(inst, code, doc)
+                
     elif target == "cuda":
         op_dict = json.load(
             open("./falcon/documents/cuda_op_tensorization.json", "r")
