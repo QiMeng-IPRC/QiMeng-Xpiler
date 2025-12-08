@@ -19,7 +19,7 @@ from falcon.src.post_processing.post_processing_prompt import (
 )
 from falcon.src.prompt.prompt import SYSTEM_PROMPT
 from falcon.util import extract_code, make_full_func
-
+from falcon.src.intrinsic_retrieval import retrieve_documentation
 
 def run_thread_binding(code, target):
     PROMPT = """
@@ -247,7 +247,6 @@ def get_operation_words(pragma_line):
 def run_tensorization(code, target):
     op_list = get_operation_words(code)
     if target == "mlu":
-        op_dict = json.load(open("./falcon/documents/bang_c_op_map.json", "r"))
         for op in op_list:
             if "memory" in op:
                 op_document = """
@@ -315,7 +314,11 @@ def run_tensorization(code, target):
 
                 """
             else:
-                op_document = op_dict[op]
+                if op in ["tanh", "relu", "exp", "gelu", "sign", "recip", "log", "rsqrt", "sqrt"]:
+                    op = "__bang_active" + op
+                else:
+                    op = "__bang_" + op
+                op_document = retrieve_documentation(op, target)
             code = tensorization(op, code, op_document)
     elif target in ["cuda", "hip"]:
         if "matmul" not in op_list:
