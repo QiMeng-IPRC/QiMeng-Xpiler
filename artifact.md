@@ -3,7 +3,7 @@
 This repository contains all the scripts and benchmarks needed to reproduce our results on:
 
 1. **LLM-based code translation** (zero- and few-shot).  
-2. **Backend performance profiling** across oneAPI, cuDNN, CNNL, rocBLAS.  
+2. **Backend performance profiling** across oneAPI, cuDNN, rocBLAS.  
 3. **End-to-end throughput tests** with and without self-debugging / SMT.
 
 ---
@@ -60,7 +60,6 @@ We measure kernel throughput on various vendor libraries:
 ```bash
 python benchmark/perf/perf_oneAPI.py      # Intel oneAPI
 python benchmark/perf/perf_cudnn.py       # NVIDIA cuDNN
-python benchmark/perf/perf_cnnl.py        # Cambricon CNNL
 python benchmark/perf/perf_rocblas.py     # AMD rocBLAS
 ```
 
@@ -134,7 +133,6 @@ Each will:
    ```bash
    python benchmark/perf/perf_oneAPI.py
    python benchmark/perf/perf_cndnn.py
-   python benchmark/perf/perf_cnnl.py
    python benchmark/perf/perf_rocblas.py
    ```
 5. **Run end-to-end scripts**:
