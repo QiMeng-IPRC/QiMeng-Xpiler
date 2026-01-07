@@ -23,7 +23,7 @@ from falcon.unit_test_c_cuda import CudaOpUnitTest
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
-
+import traceback 
 # ---------------------------
 # 日志配置
 # ---------------------------
@@ -42,9 +42,9 @@ A_LENGTH = len(ActionSpace)
 
 # 搜索参数（原来用 FLAGS，现在用常量）
 SEED: int = 42
-NUM_SIMULATIONS: int = 32
+NUM_SIMULATIONS: int = 64
 MAX_NUM_CONSIDERED_ACTIONS: int = 13
-MAX_DEPTH: int = 2
+MAX_DEPTH: int = 10
 
 encoder = tiktoken.encoding_for_model("gpt-4o")
 
@@ -111,7 +111,6 @@ class FalconGo:
         code = open_file(self.file_name)
         if self.source_platform in ["cuda", "hip"]:
             code = code.split("extern")[0]
-
         for action in actions:
             code = action(
                 self.tester,
@@ -119,7 +118,6 @@ class FalconGo:
                 self.source_platform,
                 self.target_platform,
             )
-
         target, file_type = get_target(code, self.target_platform)
         os.makedirs("tmp", exist_ok=True)
 
@@ -128,8 +126,11 @@ class FalconGo:
         new_file = os.path.join("tmp", name_no_ext + file_type)
         with open(new_file, "w", encoding="utf-8") as f:
             f.write(code)
-
-        score = objective(new_file, target)
+        _,perf_results = self.tester.perf(code, warmup=5, repeat=50)
+        try:
+            score = 1/perf_results['kernel_ms']['mean']
+        except:
+            score = -1
         if target != self.target_platform:
             score = 0.0
         return code, score
@@ -160,6 +161,8 @@ class FalconGo:
                 with open(new_file, "w", encoding="utf-8") as f:
                     f.write(code)
         except Exception:
+            #print(code)
+            traceback.print_exc()
             code = ""
             reward = -10000.0
             print(f"Invalid action: {cur_action_ids.val[0].tolist()}")
